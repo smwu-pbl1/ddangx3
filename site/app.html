@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인생재판소 · 픽셀 법정</title>
+<meta name="description" content="사소한 갈등과 잘못을 AI 법정에서 끝내는 픽셀 게임형 관계 중재 서비스 — 프로토타입 v0.2">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+/* 인생재판소 픽셀 게임 공통 스타일 */
+@font-face{font-family:'Galmuri11';font-weight:400;font-display:swap;src:url('fonts/Galmuri11.woff2') format('woff2'),url('https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11.woff2') format('woff2')}
+@font-face{font-family:'Galmuri11';font-weight:700;font-display:swap;src:url('fonts/Galmuri11-Bold.woff2') format('woff2'),url('https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11-Bold.woff2') format('woff2')}
+:root{
+  color-scheme:dark;
+  --bg:#1d1b3a;--bg2:#2a2752;--bg3:#363267;--ink:#2b2140;--panel:#fff8e7;--panel2:#f1e2c2;--paper:#fffdf6;
+  --gold:#ffd34d;--gold2:#e8a92e;--red:#ff5a5f;--red2:#cf3d47;--blue:#4aa3ff;--blue2:#2c7fd6;--pink:#ff9db1;--mint:#5fd3a6;--mint2:#2fa57a;
+  --orange:#ffa53a;--purple:#8f7cff;--wood:#b9774a;--wood2:#8a5332;--wood3:#6b3f25;--text:#2b2140;--muted:#7a6f8f;--onbg:#f4efff;
+  --px:4px;
+  --cut:polygon(0 var(--px),var(--px) var(--px),var(--px) 0,calc(100% - var(--px)) 0,calc(100% - var(--px)) var(--px),100% var(--px),100% calc(100% - var(--px)),calc(100% - var(--px)) calc(100% - var(--px)),calc(100% - var(--px)) 100%,var(--px) 100%,var(--px) calc(100% - var(--px)),0 calc(100% - var(--px)));
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--onbg);font-family:'Galmuri11',ui-monospace,'Noto Sans KR',sans-serif;font-size:15px;line-height:1.65;
+  background-image:radial-gradient(#ffffff10 1px,transparent 1.5px),radial-gradient(#ffffff08 1px,transparent 1.5px);background-size:24px 24px,24px 24px;background-position:0 0,12px 12px;
+  -webkit-font-smoothing:none;-moz-osx-font-smoothing:grayscale}
+button,input,textarea,select{font:inherit;color:inherit}
+svg{image-rendering:pixelated}
+.pbox{background:var(--panel);color:var(--text);border:var(--px) solid var(--ink);box-shadow:inset calc(-1*var(--px)) calc(-1*var(--px)) 0 var(--panel2),inset var(--px) var(--px) 0 #ffffff;clip-path:var(--cut);padding:18px}
+.pbox.dark{background:var(--bg2);color:var(--onbg);box-shadow:inset calc(-1*var(--px)) calc(-1*var(--px)) 0 #00000040,inset var(--px) var(--px) 0 #ffffff1a}
+.pbtn{--c:var(--gold);display:inline-flex;align-items:center;gap:8px;justify-content:center;font-weight:700;padding:10px 18px;border:var(--px) solid var(--ink);background:var(--c);color:var(--ink);
+  box-shadow:inset calc(-1*var(--px)) calc(-1*var(--px)) 0 #00000033,inset var(--px) var(--px) 0 #ffffff66;clip-path:var(--cut);cursor:pointer;text-decoration:none;line-height:1.3;user-select:none;transition:transform .05s}
+.pbtn:hover{filter:brightness(1.07)}.pbtn:active{transform:translateY(3px);box-shadow:inset var(--px) var(--px) 0 #00000033}
+.pbtn.red{--c:var(--red);color:#fff}.pbtn.blue{--c:var(--blue);color:#fff}.pbtn.mint{--c:var(--mint)}.pbtn.pink{--c:var(--pink)}.pbtn.purple{--c:var(--purple);color:#fff}
+.pbtn.ghost{--c:var(--panel)}.pbtn.dark{--c:var(--bg3);color:var(--onbg)}
+.pbtn.sm{padding:6px 10px;font-size:13px}
+.pbtn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.pinput,.ptext{width:100%;background:var(--paper);color:var(--text);border:var(--px) solid var(--ink);padding:10px 12px;outline:none;clip-path:var(--cut)}
+.ptext{min-height:120px;resize:vertical;line-height:1.6}
+.pinput:focus,.ptext:focus{background:#fff;box-shadow:inset 0 0 0 3px var(--gold)}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border:3px solid var(--ink);background:var(--gold);color:var(--ink);clip-path:var(--cut)}
+.blink{animation:blink 1s steps(2,start) infinite}@keyframes blink{to{visibility:hidden}}
+.bob{animation:bob 1.2s steps(2) infinite}@keyframes bob{50%{transform:translateY(-4px)}}
+.shake{animation:shake .4s steps(6)}@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(6px,-3px)}60%{transform:translate(-4px,-2px)}80%{transform:translate(4px,2px)}}
+.hpbar{height:16px;border:3px solid var(--ink);background:#3a3460;position:relative;clip-path:var(--cut)}
+.hpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--mint);transition:width .5s steps(10)}
+.stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.stars b{position:absolute;width:4px;height:4px;background:#fff;animation:tw 2s steps(2) infinite}
+@keyframes tw{50%{opacity:.2}}
+
+#game{max-width:1000px;margin:0 auto;padding:12px 12px 40px}
+.hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px}
+.hud .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:20px;color:var(--gold);cursor:pointer;text-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+.hud .stat{display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap}
+.hud .lv{color:var(--gold);font-weight:700}
+.hud .exp{width:90px}
+.hud .sp{flex:1}
+.hud .btns{display:flex;gap:6px;flex-wrap:wrap}
+.screen{display:none}.screen.on{display:block;animation:fadein .25s steps(4)}
+@keyframes fadein{from{opacity:0}}
+/* 타이틀 */
+#title{position:relative;text-align:center;padding:60px 16px 70px;min-height:520px;overflow:hidden}
+#title .logo-big{font-weight:700;font-size:clamp(44px,10vw,84px);line-height:1.1;color:var(--gold);text-shadow:6px 6px 0 var(--ink),-2px -2px 0 #fff3;letter-spacing:2px}
+#title .sub{margin:14px 0 30px;color:var(--onbg);font-size:16px}
+#title .cast{display:flex;justify-content:center;align-items:flex-end;gap:18px;margin:24px 0 30px;flex-wrap:wrap}
+#title .cast div{text-align:center;font-size:12px;color:#cfc8ea}
+#title .press{font-size:22px;font-weight:700;color:#fff;cursor:pointer;display:inline-block;padding:10px 20px}
+#title .ver{position:absolute;bottom:12px;left:0;right:0;font-size:12px;color:#8f88b8}
+/* 모드 선택 */
+.menu{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:820px){.menu{grid-template-columns:1fr}}
+.mode{cursor:pointer;position:relative;transition:transform .08s}
+.mode:hover,.mode.sel{transform:translateY(-4px)}
+.mode.sel{box-shadow:inset -4px -4px 0 var(--panel2),inset 4px 4px 0 #fff,0 0 0 4px var(--gold)}
+.mode .cur{position:absolute;left:10px;top:18px;color:var(--red);font-weight:700;visibility:hidden}
+.mode.sel .cur{visibility:visible}
+.mode h3{margin:0 0 2px 18px;font-size:19px}
+.mode .badge{margin-left:18px}
+.mode .pics{display:flex;gap:6px;align-items:flex-end;justify-content:center;margin:14px 0 10px;min-height:72px}
+.mode p{margin:6px 0 0;font-size:13px;color:#4a4060}
+.sectitle{font-weight:700;font-size:20px;color:var(--gold);text-shadow:3px 3px 0 var(--ink);margin:6px 0 12px;display:flex;align-items:center;gap:10px}
+/* 접수 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+.who{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:700}
+.party.A .who{color:var(--blue2)}.party.B .who{color:var(--red2)}
+.party.B.ask{animation:askp 1s steps(2) infinite}@keyframes askp{50%{box-shadow:inset -4px -4px 0 var(--panel2),inset 4px 4px 0 #fff,0 0 0 4px var(--red)}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.note{font-size:13px;background:#fff3c4;border:3px solid var(--ink);padding:8px 12px;color:var(--text);clip-path:var(--cut)}
+label.sm{font-size:13px;color:var(--muted)}
+/* 법정 */
+.stage{position:relative;height:330px;overflow:hidden;border:var(--px) solid var(--ink);clip-path:var(--cut);
+  background:linear-gradient(#0000 0 64%,#0000 64%),repeating-linear-gradient(90deg,#8a5332 0 46px,#7a4729 46px 50px);}
+.stage::after{content:'';position:absolute;left:0;right:0;bottom:0;height:36%;background:
+  conic-gradient(#e9d9b6 25%,#d6c39b 0 50%,#e9d9b6 0 75%,#d6c39b 0) 0 0/40px 40px;border-top:var(--px) solid var(--ink)}
+.stage .win{position:absolute;top:22px;width:70px;height:90px;background:linear-gradient(#9fd6ff,#6fb2f0);border:var(--px) solid var(--ink);box-shadow:inset 0 0 0 6px #ffffff40}
+.stage .win.l{left:5%}.stage .win.r{right:5%}
+.stage .flag{position:absolute;top:18px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:var(--gold);border:var(--px) solid var(--ink);color:var(--ink);font-weight:700;text-align:center;font-size:13px;line-height:18px}
+.bench{position:absolute;left:50%;transform:translateX(-50%);top:118px;width:260px;height:78px;background:var(--wood);border:var(--px) solid var(--ink);box-shadow:inset 0 -10px 0 var(--wood2),inset 0 6px 0 #d89a68;z-index:3}
+.bench .plate{position:absolute;left:50%;transform:translateX(-50%);top:18px;background:var(--gold);color:var(--ink);font-weight:700;font-size:12px;padding:2px 10px;border:3px solid var(--ink)}
+.chr{position:absolute;text-align:center;z-index:2;transition:transform .1s}
+.chr .nm{display:inline-block;margin-top:2px;font-size:12px;font-weight:700;background:var(--ink);color:#fff;padding:1px 8px;white-space:nowrap}
+.chr.talk{animation:bob .3s steps(2) infinite}
+.chr.dim{filter:brightness(.75)}
+#cJ{left:50%;transform:translateX(-50%);top:40px;z-index:2}
+#cJ.talk{animation:bobJ .3s steps(2) infinite}@keyframes bobJ{50%{transform:translate(-50%,-4px)}}
+#cL{left:4%;bottom:96px;display:flex;flex-direction:column-reverse;align-items:center}#cR{right:4%;bottom:96px;display:flex;flex-direction:column-reverse;align-items:center}
+#cL br,#cR br{display:none}
+.desk{position:absolute;bottom:50px;width:140px;height:48px;background:var(--wood);border:var(--px) solid var(--ink);box-shadow:inset 0 -8px 0 var(--wood2);z-index:3}
+.desk.l{left:calc(4% - 10px)}.desk.r{right:calc(4% - 10px)}
+#cPA{left:34%;bottom:14px;z-index:4}#cPB{right:34%;bottom:14px;z-index:4}#cD{left:50%;transform:translateX(-50%);bottom:14px;z-index:4}
+#cD.talk{animation:bobJ .3s steps(2) infinite}
+.stand{position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:240px;height:22px;background:var(--wood2);border:var(--px) solid var(--ink);z-index:3}
+@media(max-width:640px){.stage{height:300px}.bench{width:200px;top:112px}.desk{width:96px}#cPA{left:26%}#cPB{right:26%}.stage .win{display:none}}
+.dbox{margin-top:12px;position:relative;min-height:130px;cursor:pointer;padding-top:44px!important}
+.dbox .name{position:absolute;top:10px;left:14px;font-weight:700;padding:3px 12px;border:var(--px) solid var(--ink);background:var(--gold);color:var(--ink);clip-path:var(--cut)}
+.dbox .txt{font-size:17px;line-height:1.7;min-height:80px;padding-top:6px;white-space:pre-wrap}
+.dbox .nxt{position:absolute;right:16px;bottom:8px;color:var(--red);font-weight:700}
+.dbox .inp{margin-top:8px}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.obj{position:fixed;inset:0;display:grid;place-items:center;z-index:80;pointer-events:none}
+.obj .bub{font-weight:700;font-size:clamp(40px,9vw,92px);color:#fff;background:var(--red);border:6px solid var(--ink);padding:10px 34px;transform:rotate(-5deg) scale(.3);opacity:0;animation:objIn .95s steps(8) forwards;text-shadow:5px 5px 0 var(--ink);clip-path:polygon(0 12%,6% 12%,6% 0,94% 0,94% 12%,100% 12%,100% 88%,94% 88%,94% 100%,60% 100%,50% 120%,40% 100%,6% 100%,6% 88%,0 88%)}
+@keyframes objIn{15%{opacity:1;transform:rotate(-5deg) scale(1.1)}30%{transform:rotate(-5deg) scale(1)}85%{opacity:1}100%{opacity:0;transform:rotate(-5deg) scale(1)}}
+.flash{position:fixed;inset:0;background:#fff;z-index:79;pointer-events:none;animation:flash .25s steps(2) forwards}@keyframes flash{to{opacity:0}}
+/* 판결 */
+.slam{text-align:center;padding:26px 10px 8px}
+.slam .gv{display:inline-block;transform-origin:50% 100%;transform:rotate(-20deg)}
+.slam .gv.hit{animation:hit .35s steps(3)}@keyframes hit{0%{transform:rotate(-55deg)}60%{transform:rotate(10deg)}100%{transform:rotate(0)}}
+.slam .boom{font-weight:700;font-size:28px;color:var(--gold);text-shadow:3px 3px 0 var(--ink);height:40px}
+.result{font-weight:700;font-size:clamp(46px,11vw,96px);line-height:1.1;text-shadow:6px 6px 0 var(--ink);margin:6px 0 4px;transform:scale(0);transition:transform .3s steps(4)}
+.result.in{transform:scale(1)}
+.result.guilty{color:var(--red)}.result.free{color:var(--mint)}.result.civil{color:var(--gold)}
+.doc{background:#fffdf6;color:var(--text);border:var(--px) solid var(--ink);clip-path:var(--cut);padding:22px 24px;position:relative;margin-top:14px;
+  background-image:repeating-linear-gradient(#fffdf6 0 30px,#f3ead6 30px 32px)}
+.doc h2{text-align:center;margin:0;font-size:24px;letter-spacing:10px}
+.doc .no{text-align:center;color:var(--muted);font-size:12px;margin-bottom:12px}
+.doc .crime{text-align:center;font-weight:700;font-size:26px;color:var(--red2);margin:6px 0 12px}
+.doc h3{font-size:15px;margin:16px 0 6px;padding:2px 10px;background:var(--ink);color:#fff;display:inline-block}
+.doc dl{display:grid;grid-template-columns:80px 1fr;gap:2px 10px;margin:0;font-size:14px}.doc dt{color:var(--muted)}.doc dd{margin:0;font-weight:700}
+.stamp{position:absolute;right:18px;top:16px;border:5px solid var(--red);color:var(--red);font-weight:700;font-size:20px;padding:8px 10px;transform:rotate(-12deg);opacity:.9;background:#fffdf6}
+.rbar{display:flex;height:34px;border:var(--px) solid var(--ink);font-weight:700;color:#fff;font-size:14px}
+.rbar div{display:flex;align-items:center;padding:0 10px;white-space:nowrap;overflow:hidden}.rbar .a{background:var(--blue)}.rbar .b{background:var(--red);justify-content:flex-end}
+.tiers{display:flex;gap:4px;margin:6px 0}
+.tiers span{flex:1;text-align:center;font-size:12px;padding:4px 0;border:3px solid var(--ink);background:#eee4cf;color:var(--muted)}
+.tiers span.ask{background:#ffd9d9;color:var(--red2)}.tiers span.on{background:var(--red);color:#fff;font-weight:700}.tiers span.on.free{background:var(--mint);color:var(--ink)}
+.reason{font-size:13px;margin:5px 0;padding-left:8px;border-left:4px solid var(--gold)}
+.reason .t{font-size:11px;background:var(--ink);color:#fff;padding:0 5px;margin-right:3px}
+/* 퀘스트 */
+.quest{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:3px dashed #d6c7a6}
+.quest:last-child{border-bottom:0}
+.quest .ic{flex:0 0 auto;width:40px;height:40px;display:grid;place-items:center;background:var(--bg2);border:3px solid var(--ink)}
+.quest .bd{flex:1}.quest .k{font-weight:700}
+.quest .rw{font-size:12px;color:var(--mint2);font-weight:700}
+.quest.done{opacity:.6}.quest.done .k::after{content:' ✔ CLEAR';color:var(--mint2)}
+.closed{text-align:center;margin-top:16px;padding:20px;font-weight:700;font-size:clamp(30px,7vw,52px);color:var(--gold);text-shadow:5px 5px 0 var(--ink);display:none}
+.closed.on{display:block;animation:fadein .4s steps(4)}
+/* 모달 */
+.modal{position:fixed;inset:0;background:#0b0a1fcc;display:none;place-items:center;z-index:70;padding:14px}
+.modal.on{display:grid}
+.modal .pbox{max-width:560px;width:100%;max-height:90vh;overflow:auto}
+.arena{position:relative;height:240px;background:conic-gradient(#9fd28f 25%,#8cc47c 0 50%,#9fd28f 0 75%,#8cc47c 0) 0 0/32px 32px;border:var(--px) solid var(--ink);margin:10px 0;cursor:crosshair;overflow:hidden}
+.arena .tr{position:absolute;cursor:pointer}
+.arena .tr:active{transform:scale(.8)}
+.roul{font-weight:700;font-size:20px;text-align:center;padding:18px;border:var(--px) solid var(--ink);background:var(--bg2);color:var(--gold);margin:10px 0;min-height:70px}
+/* 기록 */
+.badges{display:flex;gap:10px;flex-wrap:wrap}
+.badge2{display:flex;gap:8px;align-items:center;padding:8px 12px;border:3px solid var(--ink);background:var(--panel2);color:var(--text);font-weight:700;font-size:13px;clip-path:var(--cut)}
+.badge2.off{opacity:.35;filter:grayscale(1)}
+table.rec{width:100%;border-collapse:collapse;font-size:13px}
+table.rec th,table.rec td{border:3px solid var(--ink);padding:6px 8px;text-align:left}table.rec th{background:var(--ink);color:#fff}
+/* 엔진 패널 */
+.eng{font-size:13px}.eng h4{margin:12px 0 4px;color:var(--red2)}.eng table{width:100%;border-collapse:collapse}.eng td,.eng th{border-bottom:2px dotted #c9b98f;padding:2px 4px;text-align:right}.eng td:first-child,.eng th:first-child{text-align:left}
+.eng code{background:#efe3c7;padding:1px 4px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:90;display:none}
+.toast.on{display:block;animation:fadein .2s steps(3)}
+footer{max-width:1000px;margin:0 auto;padding:0 12px 30px;color:#8f88b8;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div id="game">
+  <header class="hud pbox dark">
+    <span class="logo" id="goHome"><span id="hudGavel"></span>인생재판소</span>
+    <span class="stat"><span class="lv" id="hudLv">Lv.1</span><span class="hpbar exp"><i id="hudExp" style="width:0%"></i></span></span>
+    <span class="stat"><span id="hudCoinIc"></span><b id="hudCoin">30</b></span>
+    <span class="stat" title="재판 기록"><span id="hudCaseIc"></span><b id="hudCase">0</b>건</span>
+    <span class="sp"></span>
+    <span class="btns">
+      <button class="pbtn sm dark" id="btnRecord">기록부</button>
+      <button class="pbtn sm dark" id="btnEngine">엔진</button>
+      <button class="pbtn sm dark" id="btnMode">데모 엔진</button>
+      <button class="pbtn sm dark" id="btnSound" aria-pressed="true">♪ ON</button>
+    </span>
+  </header>
+
+  <!-- 타이틀 -->
+  <section class="screen on pbox dark" id="title">
+    <div class="stars" id="stars"></div>
+    <div class="logo-big">인생재판소</div>
+    <div class="sub">사소한 갈등도, 사소한 잘못도 — 오늘 법정에서 끝낸다</div>
+    <div class="cast" id="cast"></div>
+    <div class="press blink" id="press">▶ PRESS START</div>
+    <div class="ver">PIXEL COURT v0.2 · PBLⅠ 팀 인생재판소 · 클릭 또는 Enter</div>
+  </section>
+
+  <!-- 모드 선택 -->
+  <section class="screen" id="select">
+    <div class="sectitle">SELECT MODE <span class="tag">↑↓ / 클릭</span></div>
+    <div class="menu" id="menu">
+      <div class="mode pbox" data-mode="duo"><span class="cur">▶</span><h3>같이 재판</h3><span class="badge tag" style="background:var(--blue);color:#fff">2P · 민사</span>
+        <div class="pics" data-pics="duo"></div><p>상대에게 반론 요청 링크를 보내 <b>둘 다</b> 진술합니다. 과실 비율을 정하고 화해 미션까지!</p></div>
+      <div class="mode pbox" data-mode="solo"><span class="cur">▶</span><h3>혼자 사연 접수</h3><span class="badge tag" style="background:var(--pink)">1P · 민사</span>
+        <div class="pics" data-pics="solo"></div><p>상대 없이 나 혼자 사연을 씁니다. 상대 측 변호인이 <b>상대 입장을 추정</b>해서 변론해요.</p></div>
+      <div class="mode pbox" data-mode="crim"><span class="cur">▶</span><h3>자수하기</h3><span class="badge tag" style="background:var(--red);color:#fff">1P · 형사</span>
+        <div class="pics" data-pics="crim"></div><p>내가 저지른 사소한 잘못을 자백! <b>나 혼자 피고인</b>이 되어 검사 vs 변호사의 공방 후 형량을 받습니다.</p></div>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:space-between"><button class="pbtn ghost sm" id="backTitle">◀ 타이틀</button><button class="pbtn" id="selGo">결정 ▶</button></div>
+  </section>
+
+  <!-- 접수 -->
+  <section class="screen" id="intake">
+    <div class="sectitle" id="inTitle">CASE FILE</div>
+    <div class="pbox">
+      <div class="note hidden" id="inviteNote" style="display:none;margin-bottom:10px"></div>
+      <div id="inDesc" style="font-size:14px"></div>
+      <div class="chips" id="presets"></div>
+      <div id="formCivil">
+        <div class="row" style="margin-bottom:10px"><label class="sm" for="rel">관계</label><select id="rel" class="pinput" style="width:auto"><option>연인</option><option>친구</option><option>룸메이트</option><option>팀플</option><option>가족</option><option>기타</option></select></div>
+        <div class="grid2">
+          <div class="party A pbox" style="background:#e8f3ff"><div class="who"><span id="avA"></span><span>신청인 (A)</span></div>
+            <input class="pinput" id="nameA" placeholder="이름 / 별명" maxlength="10"><textarea class="ptext" id="textA" style="margin-top:8px" placeholder="무슨 일이 있었나요? 있었던 일과 서운했던 점을 적어 주세요."></textarea></div>
+          <div class="party B pbox" id="partyB" style="background:#ffeef0"><div class="who"><span id="avB"></span><span id="bLabel">상대방 (B) · 반론서</span></div>
+            <input class="pinput" id="nameB" placeholder="상대 이름 / 별명" maxlength="10"><textarea class="ptext" id="textB" style="margin-top:8px" placeholder="상대방이 직접 쓰는 칸이에요."></textarea>
+            <div class="note" id="soloNote" style="display:none;margin-top:8px">혼자 사연 접수 모드: 상대 진술 대신 <b>AI 변호인이 상대 입장을 추정</b>하고, 판결은 50:50 쪽으로 보수 조정됩니다.</div></div>
+        </div>
+      </div>
+      <div id="formCrim" style="display:none">
+        <div class="grid2">
+          <div><label class="sm">피고인 (나)</label><input class="pinput" id="nameD" placeholder="이름 / 별명" maxlength="10"></div>
+          <div><label class="sm">피해자</label><select class="pinput" id="victim"><option>나 자신</option><option>친구</option><option>가족</option><option>팀원</option><option>연인</option><option>룸메</option></select></div>
+        </div>
+        <label class="sm" style="display:block;margin-top:10px">자백서 — 무엇을 했나요? (솔직할수록 형량이 가벼워질지도…)</label>
+        <textarea class="ptext" id="textD" placeholder="예) 논문 마감이 내일인데 어제 새벽까지 게임했어."></textarea>
+      </div>
+      <div class="row" style="margin-top:14px;justify-content:space-between">
+        <div class="row"><button class="pbtn ghost sm" id="backSel">◀ 모드</button><button class="pbtn blue sm" id="btnInvite">반론 요청 링크</button></div>
+        <button class="pbtn red" id="btnStart">개정! 재판 시작 ▶</button>
+      </div>
+      <div id="inviteOut" style="font-size:13px;margin-top:8px;word-break:break-all"></div>
+    </div>
+  </section>
+
+  <!-- 안전 차단 -->
+  <section class="screen" id="block">
+    <div class="pbox">
+      <div class="sectitle" style="color:var(--red2);text-shadow:none">이 사건은 게임으로 다룰 수 없어요</div>
+      <p>입력에 <b id="blockHits"></b> 같은 표현이 있어요. 폭력·위협·법적 분쟁·안전 문제는 재미로 판결할 일이 아니에요. 도움을 받을 수 있는 곳을 안내할게요.</p>
+      <p>지금 위험하다면 <b>112</b> · 여성긴급전화 <b>1366</b> · 법률 상담 대한법률구조공단 <b>132</b> · 마음이 많이 힘들 때 <b>109</b></p>
+      <button class="pbtn ghost" id="blockBack">진술 다시 쓰기</button>
+    </div>
+  </section>
+
+  <!-- 법정 -->
+  <section class="screen" id="court">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="sectitle" id="caseTitle" style="margin:0">COURT</div><span class="tag" id="judgeTag">균형형 판사</span></div>
+    <div class="stage" id="stage">
+      <div class="win l"></div><div class="win r"></div><div class="flag">공정 · 화해</div>
+      <div class="chr" id="cJ"></div>
+      <div class="bench"><span class="plate">재판장</span></div>
+      <div class="chr" id="cL"></div><div class="desk l"></div>
+      <div class="chr" id="cR"></div><div class="desk r"></div>
+      <div class="chr" id="cPA"></div><div class="chr" id="cPB"></div><div class="chr" id="cD"></div>
+      <div class="stand"></div>
+    </div>
+    <div class="dbox pbox" id="dbox"><span class="name" id="dName">판사</span><div class="txt" id="dTxt"></div><span class="nxt blink" id="dNext">▼</span>
+      <div class="inp" id="dInp" style="display:none"><textarea class="ptext" id="lastWord" style="min-height:70px" placeholder="예) 정말 반성하고 있어요. 다음부터는 마감 3일 전에 시작할게요."></textarea>
+        <div class="row" style="margin-top:8px"><button class="pbtn red sm" id="lastGo">최후 진술 제출</button><button class="pbtn ghost sm" id="lastSkip">할 말 없음</button></div></div>
+    </div>
+    <div class="ctrl"><button class="pbtn" id="btnNext">다음 ▶</button><button class="pbtn dark" id="btnAuto">AUTO</button><button class="pbtn red" id="btnObj">이의 있음!</button><button class="pbtn dark" id="btnLog">LOG</button><button class="pbtn mint" id="btnVerdict" style="display:none">판결 선고 ▶</button></div>
+    <div class="pbox" id="objBox" style="display:none;margin-top:12px">
+      <b>이의 제기 · 추가 진술</b>
+      <div class="row" id="objSides" style="margin:6px 0"><label><input type="radio" name="objSide" value="A" checked> <span id="objAName">A</span></label><label><input type="radio" name="objSide" value="B"> <span id="objBName">B</span></label></div>
+      <textarea class="ptext" id="objText" style="min-height:70px" placeholder="예) 근데 나 그날 미리 늦는다고 연락했었어."></textarea>
+      <div class="row" style="margin-top:8px"><button class="pbtn red sm" id="objGo">제출</button><button class="pbtn ghost sm" id="objCancel">취소</button></div>
+    </div>
+  </section>
+
+  <!-- 판결 -->
+  <section class="screen" id="verdict">
+    <div class="pbox dark slam"><div class="gv" id="bigGavel"></div><div class="boom" id="boom"></div><div class="result" id="resultTxt"></div><div id="resultSub" style="font-size:15px"></div></div>
+    <article class="doc" id="doc"></article>
+    <div class="row" style="margin-top:12px;justify-content:space-between">
+      <div class="row"><button class="pbtn dark" id="btnAppeal">항소 (다른 판사)</button><select class="pinput" id="appealJudge" style="width:auto"></select></div>
+      <div class="row"><button class="pbtn ghost" id="btnCard">판결 카드 저장</button><button class="pbtn red" id="btnExec">형 집행 퀘스트 ▶</button></div>
+    </div>
+    <div class="pbox" id="appealBox" style="display:none;margin-top:12px"></div>
+  </section>
+
+  <!-- 퀘스트 -->
+  <section class="screen" id="quest">
+    <div class="sectitle">QUEST LOG <span class="tag" id="qProg">0 / 0</span></div>
+    <div class="pbox" id="qList"></div>
+    <div class="pbox" id="apoBox" style="display:none;margin-top:12px">
+      <b id="apoTitle">사과문 제출 (AI 심사)</b>
+      <p style="font-size:13px;margin:4px 0 8px;color:var(--muted)">① 잘못 인정 ② 상대가 받은 영향 ③ 다음엔 어떻게 할지 — 변명(“근데”, “너도”)은 감점!</p>
+      <textarea class="ptext" id="apology" style="min-height:90px"></textarea>
+      <div class="row" style="margin-top:8px"><button class="pbtn" id="apoGo">심사 요청</button></div>
+      <div id="apoOut" style="margin-top:10px"></div>
+    </div>
+    <div class="closed" id="closed">CASE CLOSED!</div>
+    <div class="row" style="margin-top:12px;justify-content:center"><button class="pbtn ghost" id="qRecord">기록부 보기</button><button class="pbtn" id="qNew">새 사건 ▶</button></div>
+  </section>
+
+  <!-- 기록부 -->
+  <section class="screen" id="record">
+    <div class="sectitle">재판 기록부</div>
+    <div class="pbox">
+      <div class="row" id="recStats" style="gap:18px;font-weight:700"></div>
+      <h4 style="margin:14px 0 6px">칭호</h4><div class="badges" id="recBadges"></div>
+      <h4 style="margin:14px 0 6px">사건 기록</h4><div style="overflow-x:auto"><table class="rec" id="recTable"></table></div>
+      <div class="row" style="margin-top:12px;justify-content:space-between"><button class="pbtn ghost sm" id="recReset">기록 초기화</button><button class="pbtn" id="recBack">메뉴로 ▶</button></div>
+    </div>
+  </section>
+</div>
+<footer>인생재판소는 일상의 사소한 갈등·잘못을 다루는 엔터테인먼트·관계 중재 서비스이며, 법률·심리 상담을 대신하지 않습니다. · 픽셀 폰트: 갈무리(Galmuri, SIL OFL)</footer>
+
+<!-- 모달들 -->
+<div class="modal" id="mEngine"><div class="pbox"><div class="row" style="justify-content:space-between"><b>엔진 들여다보기</b><button class="pbtn sm ghost" data-close>닫기</button></div><div class="eng" id="engBody">재판을 시작하면 단계별 계산이 표시됩니다.</div></div></div>
+<div class="modal" id="mLog"><div class="pbox"><div class="row" style="justify-content:space-between"><b>대화 기록</b><button class="pbtn sm ghost" data-close>닫기</button></div><div id="logBody" style="font-size:14px"></div></div></div>
+<div class="modal" id="mMode"><div class="pbox">
+  <b>판결 엔진 선택</b>
+  <p style="font-size:13px">기본은 <b>데모 엔진</b>(브라우저 안에서 도는 규칙 엔진, 키 필요 없음). <b>LLM 모드</b>는 Claude API 키로 대사·죄명을 생성하고, 판결은 설명 가능한 규칙 엔진과 함께 보여 줍니다.</p>
+  <label class="sm">Claude API 키 (메모리에만 보관)</label><input class="pinput" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+  <label class="sm" style="display:block;margin-top:8px">모델 ID</label><input class="pinput" id="apiModel" value="claude-sonnet-4-5">
+  <div class="row" style="margin-top:10px"><button class="pbtn" id="modeDemo">데모 엔진</button><button class="pbtn red" id="modeLLM">LLM 모드</button><button class="pbtn ghost" data-close>닫기</button></div>
+</div></div>
+<div class="modal" id="mGame"><div class="pbox"><b>사회봉사: 법원 앞 쓰레기 줍기</b><div class="row" style="justify-content:space-between;font-size:14px;margin-top:6px"><span>남은 시간 <b id="gTime">15</b>초</span><span>주운 쓰레기 <b id="gCnt">0</b> / 8</span></div>
+  <div class="arena" id="arena"></div><div class="row" style="justify-content:space-between"><span id="gMsg" style="font-size:13px">시작을 누르면 쓰레기가 나타나요!</span><button class="pbtn mint" id="gStart">시작</button></div></div></div>
+<div class="modal" id="mRoul"><div class="pbox"><b>괘씸죄 랜덤 벌칙 룰렛</b><div class="roul" id="roulTxt">???</div><div class="row" style="justify-content:flex-end"><button class="pbtn red" id="roulGo">돌리기!</button><button class="pbtn ghost" data-close>닫기</button></div></div></div>
+<div class="modal" id="mNag"><div class="pbox"><div class="row"><span id="nagJ"></span><b>부엉 판사의 잔소리</b></div><div id="nagTxt" style="font-size:16px;min-height:60px;margin:10px 0"></div><div class="row" style="justify-content:flex-end"><button class="pbtn" id="nagNext">다음 ▶</button></div></div></div>
+<div class="obj" id="objFx" style="display:none"><div class="bub">이의 있음!</div></div>
+<div class="toast pbox" id="toast"></div>
+
+<script>
+/* 인생재판소 판결 엔진 v0.1 (규칙 기반 데모 엔진)
+ * 입력: 관계 유형, 양측 이름·진술 → 출력: 안전검사, 쟁점, 특징점수, 과실비율, 근거, 공방 대본, 화해 명령
+ * LLM 모드에서도 이 엔진의 특징점수는 '설명용 근거'로 함께 표시한다. */
+(function (root) {
+  const ISSUES = [
+    { id: 'time', name: '약속·시간', kws: ['늦', '지각', '약속', '기다렸', '기다리', '미뤄', '펑크', '시간 안'],
+      crime: '약속시간 무단 연착죄', clause: '늦을 것 같으면 출발 전에 먼저 알린다',
+      mission: '다음 약속에 10분 일찍 도착해 인증 사진 보내기' },
+    { id: 'contact', name: '연락·답장', kws: ['답장', '카톡', '연락', '읽씹', '전화', '문자', '디엠', 'DM', '잠수', '답이 없', '씹더', '씹었', '씹혀', '연락이 없', '개인톡'],
+      crime: '연락 장기 방치죄', clause: '바쁠 땐 "지금 바빠, 몇 시에 연락할게" 한 줄은 보낸다',
+      mission: '48시간 동안 답장은 2시간 안에 하기' },
+    { id: 'money', name: '돈·정산', kws: ['돈', '정산', '더치', '계산', '빌려', '갚', '송금', '엔빵', 'N빵', '회비'],
+      crime: '정산 지연죄', clause: '정산은 그날 밤 12시 전에 끝낸다',
+      mission: '정산 내역을 표로 정리해 공유하고 바로 송금하기' },
+    { id: 'chores', name: '집안일·분담', kws: ['설거지', '청소', '분리수거', '빨래', '쓰레기', '집안일', '당번', '화장실'],
+      crime: '공동생활 의무 태만죄', clause: '당번을 못 하면 하루 전에 말하고 다음 당번을 대신한다',
+      mission: '다음 당번 1회 대신하기' },
+    { id: 'space', name: '소음·공간', kws: ['시끄', '소음', '새벽까지', '냉장고', '허락', '내 물건', '공용', '말도 없이', '마음대로', '멋대로'],
+      crime: '공용공간 무단 점유죄', clause: '밤 11시 이후엔 공용공간 소리를 줄인다',
+      mission: '공용공간 사용 규칙 3줄을 함께 써서 붙이기' },
+    { id: 'care', name: '기념일·배려', kws: ['생일', '기념일', '선물', '예약', '챙기', '서운', '1주년', '100일', '챙겼', '축하'],
+      crime: '기념일 준비 소홀죄', clause: '중요한 날 준비는 일주일 전에 같이 확인한다',
+      mission: '다시 예약하고, 그날 일정을 직접 짜서 공유하기' },
+    { id: 'tone', name: '말투·표현', kws: ['말투', '무시', '짜증', '비꼬', '소리 질', '화내', '정색', '한숨', '저격', '비아냥'],
+      crime: '말투 과속죄', clause: '화가 나면 "10분만 있다 얘기하자"고 말한다',
+      mission: '"아까 그 말은 이런 뜻이었어"를 다시 말해 주기' },
+    { id: 'team', name: '팀플 기여', kws: ['과제', '발표', '자료', 'PPT', '조별', '팀플', '역할', '마감', '무임승차', '회의', '버스 타', '이름만 올'],
+      crime: '팀플 기여 지연죄', clause: '마감 하루 전까지 자기 파트를 공유한다',
+      mission: '남은 작업 1개를 먼저 맡고 마감 하루 전에 공유하기' }
+  ];
+  const LEX = {
+    repeat: ['또 ', '또다시', '맨날', '항상', '매번', '계속', '몇 번', '번째', '일째', '이번에도', '지난번에도', '그랬고'],
+    admit: ['미안', '잘못', '내 탓', '인정', '깜빡', '실수', '까먹은 건'],
+    notice: ['미리', '양해', '말했었', '얘기했었', '부탁했', '말해뒀'],
+    reason: ['때문에', '야근', '시험', '알바', '아파', '아팠', '바빠', '바빴', '정신이 없'],
+    excuse: ['근데', '어쩔 수', '원래', '별거', '별것', '큰일', '예민', '그럴 수도'],
+    hostile: ['ㅡㅡ', '!!', '어이없', '미친', '진짜 너무', '짜증나', '열받']
+  };
+  const SAFETY = ['때렸', '때리', '폭행', '맞았', '협박', '스토킹', '죽고 싶', '죽어버', '자해', '성추행', '성폭',
+    '고소', '소송', '감금', '불법촬영', '몰래 찍',
+    // 완곡 표현 보강(신체 위해·스토킹·협박·자해 암시·통제)
+    '멍이 들', '멍들', '물건을 던', '밀쳤', '목을 졸', '번호를 바꿔도', '퍼뜨리겠', '올리겠다고', '뿌리겠',
+    '내가 없어지면', '사라지고 싶', '살기 싫', '폰을 검사', '못 만나게'];
+  // 부분일치 오탐 예외: 이 표현 안의 SAFETY 키워드는 무시 ('고소한 냄새', '금액이 맞았는지' 등)
+  const SAFETY_EXCEPT = ['고소한', '고소하', '맞았는지', '맞았어?', '시간 맞'];
+  // 혼자 사연 접수 시, 상대 측 변호인이 쓰는 '추정 진술' (쟁점별)
+  const ESTIMATE = {
+    time: '출발 직전에 일이 생겨서 늦었어. 일부러 기다리게 한 건 아니야.',
+    contact: '바빠서 확인을 못 했어. 무시하려던 건 아니었어.',
+    money: '정산하는 걸 잊고 있었어. 안 주려던 건 아니야.',
+    chores: '요즘 너무 바빠서 미뤘어. 나중에 몰아서 하려고 했어.',
+    space: '그렇게 시끄러운지 몰랐어. 말해 줬으면 바로 줄였을 거야.',
+    care: '중요한 날인 건 알았는데 준비할 여유가 없었어. 마음이 없었던 건 아니야.',
+    tone: '그런 뜻으로 한 말이 아니었어. 말투가 세게 나간 것 같아.',
+    team: '다른 일정이 겹쳐서 늦어졌어. 맡은 건 끝까지 하려고 했어.'
+  };
+  const JUDGES = {
+    balance: { name: '균형형 판사', desc: '행위·사정·태도를 같은 무게로 봄', w: { act: 1.0, mit: 1.0, att: 1.0 } },
+    principle: { name: '원칙형 판사', desc: '무엇을 했는지(행위)를 가장 무겁게 봄', w: { act: 1.5, mit: 0.5, att: 0.8 } },
+    mercy: { name: '온정형 판사', desc: '사정과 사전 양해를 크게 참작함', w: { act: 0.8, mit: 1.8, att: 0.6 } },
+    attitude: { name: '태도중시형 판사', desc: '변명·공격적 말투를 엄하게 봄', w: { act: 0.9, mit: 0.9, att: 1.6 } }
+  };
+
+  const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1); return w + ((c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b); };
+  const count = (t, list) => list.reduce((s, k) => { let i = 0, n = 0; while ((i = t.indexOf(k, i)) !== -1) { n++; i += k.length; } return s + n; }, 0);
+  const quoteRe = /['"‘’“”「」]([^'"‘’“”「」]{2,60})['"‘’“”「」]/g;
+  function splitQuotes(t) {
+    const quoted = []; const own = t.replace(quoteRe, (m, q) => { quoted.push(q); return ' '; });
+    return { own, quoted: quoted.join(' ') };
+  }
+  const sentences = t => t.split(/(?<=[.!?。…~])\s+|\n+/).map(s => s.trim()).filter(s => s.length > 1);
+  const SELF_RE = /미안|잘못|내 탓|인정|^(내가|나는|난 |나도)/;
+  const lenFactor = t => Math.max(1, t.replace(/\s/g, '').length / 120);
+
+  function safetyCheck(text) {
+    const t = SAFETY_EXCEPT.reduce((s, e) => s.split(e).join(' '), text);
+    const hits = SAFETY.filter(k => t.includes(k));
+    return { ok: hits.length === 0, hits };
+  }
+
+  function issueHits(t) {
+    const first = is => Math.min(...is.kws.map(k => { const i = t.indexOf(k); return i < 0 ? 1e9 : i; }));
+    return ISSUES.map(is => ({ id: is.id, name: is.name, n: count(t, is.kws), at: first(is) }))
+      .filter(x => x.n > 0).sort((a, b) => b.n - a.n || a.at - b.at);
+  }
+  // 역공(상대 지목) 문장만 골라 쟁점 추출: 상대 이름·'너'·'~잖아'가 들어간 문장
+  function counterIssue(t, otherName) {
+    const ss = sentences(splitQuotes(t).own).filter(s => s.includes(otherName) || /너(도|가|는)|잖아/.test(s));
+    return issueHits(ss.join(' '))[0];
+  }
+
+  // X에 대한 특징: 상대(Y) 진술에서 X를 지목한 정도 + X 자신의 진술에서 드러나는 사정·태도
+  function features(Xt, Yt, normalize) {
+    const X = splitQuotes(Xt), Y = splitQuotes(Yt);
+    const fx = normalize ? lenFactor(Xt) : 1, fy = normalize ? lenFactor(Yt) : 1;
+    const allKw = ISSUES.flatMap(i => i.kws);
+    const r = {
+      // 지목: 상대가 자기 잘못을 인정하거나 자기 얘기를 하는 문장(미안/잘못/내가/나는…)은 X 지목으로 세지 않는다
+      accuse: count(sentences(Y.own).filter(s => !SELF_RE.test(s)).join(' '), allKw) / fy,
+      repeat: count(Y.own, LEX.repeat) / fy,
+      admit: count(X.own, LEX.admit) / fx,
+      notice: count(X.own, LEX.notice) / fx,
+      reason: count(X.own, LEX.reason) / fx,
+      excuse: count(X.own, LEX.excuse) / fx,
+      hostile: count(X.own, LEX.hostile) / fx,
+      quotedByOther: (count(Y.quoted, LEX.excuse) + count(Y.quoted, LEX.hostile)) // 상대가 인용한 X의 말
+    };
+    const adm = Math.min(2, r.admit); // 인정은 행위를 '확인'하지만 태도 점수를 크게 깎는다 → 인정할수록 유리하게
+    r.act = 2 * r.accuse + 3 * r.repeat + 2 * adm;
+    r.mit = 3 * r.notice + 2 * r.reason;
+    r.att = 3 * r.excuse + 2 * r.hostile + 1.5 * r.quotedByOther - 3 * adm;
+    return r;
+  }
+  // 사정 참작(mit)은 행위 점수의 60%까지만 깎을 수 있다 → 온정형 판사도 판결을 완전히 뒤집지는 않음
+  const faultOf = (f, w) => Math.max(2, 8 + w.act * f.act - Math.min(w.mit * f.mit, 0.6 * w.act * f.act) + w.att * f.att);
+  const round5 = x => Math.round(x / 5) * 5;
+
+  function ratio(At, Bt, judgeKey, opt) {
+    opt = opt || {};
+    const w = JUDGES[judgeKey || 'balance'].w;
+    const fA = features(At, Bt, opt.normalize !== false), fB = features(Bt, At, opt.normalize !== false);
+    const a = faultOf(fA, w), b = faultOf(fB, w);
+    let pA = 100 * a / (a + b);
+    if (opt.oneSided) pA = 50 + (pA - 50) * 0.7; // 한쪽 진술만 있을 때는 50:50 쪽으로 보수적 판결
+    pA = Math.min(90, Math.max(10, round5(pA)));
+    return { pA, pB: 100 - pA, fA, fB, rawA: a, rawB: b };
+  }
+
+  // 근거 문장: 각 문장이 어떤 특징을 건드리는지 점수화 (설명가능성)
+  function evidence(text, who, other) {
+    return sentences(text).map(s => {
+      const own = splitQuotes(s).own; const tags = [];
+      if (count(own, ISSUES.flatMap(i => i.kws)) > 0) tags.push('지목');
+      if (count(own, LEX.repeat)) tags.push('반복');
+      if (count(own, LEX.admit)) tags.push('인정');
+      if (count(own, LEX.notice)) tags.push('사전고지');
+      if (count(own, LEX.reason)) tags.push('사정');
+      if (count(own, LEX.excuse)) tags.push('변명');
+      if (count(own, LEX.hostile)) tags.push('공격적');
+      if (splitQuotes(s).quoted) tags.push('인용');
+      return { s, who, tags, w: tags.length };
+    }).filter(e => e.w > 0);
+  }
+  const pick = (ev, tag) => (ev.find(e => e.tags.includes(tag)) || {}).s;
+
+  function judge(input, judgeKey) {
+    const A = input.A, B = input.B;
+    const At = (A.text || '').trim(), Bt = (B.text || '').trim();
+    const oneSided = Bt.length < 5;
+    const safety = safetyCheck(At + ' ' + Bt);
+    if (!safety.ok) return { blocked: true, safety };
+
+    const r = ratio(At, Bt || ' ', judgeKey, { oneSided });
+    const swapped = ratio(Bt || ' ', At, judgeKey, { oneSided }); // 순서 교체 점검
+    const raw = ratio(At, Bt || ' ', judgeKey, { oneSided, normalize: false }); // 길이 보정 전
+    const issuesAll = issueHits(At + ' ' + Bt);
+    const issueAgainstB = issueHits(splitQuotes(At).own)[0];
+    const issueAgainstA = counterIssue(Bt, A.name);
+    const heavier = r.pA > r.pB ? 'A' : r.pB > r.pA ? 'B' : null;
+    const mainIssueId = heavier === 'A' ? (issueAgainstA || issuesAll[0] || {}).id
+      : heavier === 'B' ? (issueAgainstB || issuesAll[0] || {}).id : (issuesAll[0] || {}).id;
+    const main = ISSUES.find(i => i.id === mainIssueId) || ISSUES.find(i => i.id === 'tone');
+    const gap = Math.abs(r.pA - 50);
+    const sentence = gap <= 10 ? { level: 0, name: '쌍방 훈방', desc: '둘 다 조금씩. 처벌 대신 화해 권고' }
+      : gap <= 25 ? { level: 1, name: '경범 판결', desc: '사과문 + 소액 배상 + 관계 계약 1조' }
+      : { level: 2, name: '중범 판결', desc: '사과문 + 배상 + 관계 계약 2주 집행유예' };
+    const crime = heavier ? main.crime : '쌍방 소통 불이행죄';
+    const evA = evidence(At, 'A', 'B'), evB = evidence(Bt, 'B', 'A');
+    const reasons = [...evA, ...evB].sort((x, y) => y.w - x.w).slice(0, 3);
+
+    const hName = heavier === 'A' ? A.name : heavier === 'B' ? B.name : null;
+    const lName = heavier === 'A' ? B.name : heavier === 'B' ? A.name : null;
+    const missions = [];
+    if (heavier) {
+      if (sentence.level >= 1) missions.push({ who: hName, side: heavier, kind: '사과문', text: '인정 → 상대가 받은 영향 → 다음엔 어떻게 할지, 세 문장 사과문 쓰기 (AI 심사)' });
+      missions.push({ who: hName, side: heavier, kind: '교화 미션', text: main.mission });
+      if (sentence.level >= 1) missions.push({ who: hName, side: heavier, kind: '배상', text: sentence.level === 2 ? '디저트 세트 기프티콘 (12,000원 상당)' : '아메리카노 기프티콘 1잔 (4,500원 상당)' });
+      missions.push({ who: lName, side: heavier === 'A' ? 'B' : 'A', kind: '수용', text: '사과를 듣고 "받아들일게" 또는 "아직 이 부분은 서운해" 중 하나를 솔직히 말하기' });
+      const lowSide = heavier === 'A' ? 'B' : 'A'; const lowP = lowSide === 'A' ? r.pA : r.pB;
+      const lowIssue = ISSUES.find(i => i.id === ((lowSide === 'A' ? issueAgainstA : issueAgainstB) || {}).id);
+      if (lowP >= 35 && lowIssue && lowIssue.id !== main.id) missions.push({ who: lName, side: lowSide, kind: '교화 미션', text: lowIssue.mission });
+    } else {
+      missions.push({ who: A.name + ' · ' + B.name, side: 'AB', kind: '공동 미션', text: '각자 "내가 아쉬웠던 점 1개"를 먼저 말하고 서로 한 번씩 인정하기' });
+    }
+    const script = buildScript(input, r, { main, issuesAll, issueAgainstA, issueAgainstB, evA, evB, heavier, oneSided });
+    return {
+      blocked: false, judge: JUDGES[judgeKey || 'balance'], judgeKey: judgeKey || 'balance',
+      ratio: r, check: { swappedPA: swapped.pB, rawPA: raw.pA, oneSided },
+      issues: issuesAll, main, crime, sentence, reasons, missions, clause: main.clause, script, heavier
+    };
+  }
+
+  function buildScript(input, r, c) {
+    const A = input.A.name, B = input.B.name;
+    const iss = c.issuesAll.slice(0, 3).map(i => i.name).join(', ') || '감정 표현';
+    const lines = [];
+    lines.push({ role: 'J', text: `지금부터 ${A} 대 ${B}, ‘${c.main.name}’ 사건 재판을 시작합니다. 이 법정은 이긴 사람을 가리는 곳이 아니라, 같은 일로 다시 싸우지 않게 하는 곳입니다. 쟁점은 ${iss}입니다.` });
+    const a1 = pick(c.evA, '반복') || pick(c.evA, '지목') || (c.evA[0] || {}).s;
+    if (a1) lines.push({ role: 'A', text: `재판장님, 핵심은 ${B} 측의 ${(c.issueAgainstB || c.main).name} 문제입니다. 신청인의 진술을 보시죠. “${a1}”${pick(c.evA, '반복') ? ' 이번이 처음이 아니라는 점도 꼭 봐주십시오.' : ''}` });
+    if (c.oneSided) {
+      const est = ESTIMATE[(c.issueAgainstB || c.main).id] || ESTIMATE.tone;
+      lines.push({ role: 'B', text: `이의 있습니다! ${B} 본인의 진술은 아직 없습니다. 본 변호인이 ${B}의 입장을 추정해 보겠습니다. “${est}” (AI 추정) 직접 듣기 전까지는 단정할 수 없으니, 판결은 50:50 쪽으로 조정해 주십시오.` });
+      lines.push({ role: 'A', text: `추정은 추정일 뿐입니다. 신청인이 겪은 일은 분명합니다. 다만 ${B}에게 직접 들어 볼 기회는 열어 두겠습니다.` });
+    } else {
+      const b1 = pick(c.evB, '사정') || pick(c.evB, '사전고지') || (c.evB[0] || {}).s;
+      if (b1) lines.push({ role: 'B', text: `이의 있습니다! ${B}에게도 사정이 있었습니다. “${b1}”${pick(c.evB, '사전고지') && pick(c.evB, '사전고지') !== b1 ? ` 게다가 “${pick(c.evB, '사전고지')}” 사전에 알렸다는 점도 있습니다.` : ''}` });
+      const quotedEx = c.evA.find(e => e.tags.includes('인용') && /큰일|별거|별것|예민|원래|근데/.test(e.s));
+      const exB2 = c.evB.find(e => e.tags.includes('변명') && e.s !== b1);
+      const exB = (quotedEx && quotedEx.s) || (exB2 && exB2.s);
+      lines.push({ role: 'A', text: exB ? `사정은 이해합니다. 하지만 “${exB}” 이 부분은 문제를 더 키웠습니다. 실수보다 그 뒤의 반응이 신청인을 더 서운하게 했습니다.` : `사정이 있었다 해도, 결과적으로 그 부담을 ${A}가 혼자 떠안았습니다.` });
+      const ad = pick(c.evB, '인정');
+      const counter = c.issueAgainstA ? `또한 ${A} 측에도 ${c.issueAgainstA.name} 부분의 책임이 있었다는 점을 고려해 주십시오.` : '';
+      lines.push({ role: 'B', text: (ad ? `${B}는 이미 “${ad}”라고 잘못을 인정했습니다. 정상 참작을 요청합니다. ` : '고의가 아니었다는 점을 참작해 주십시오. ') + counter });
+    }
+    lines.push({ role: 'J', text: `양측 주장 잘 들었습니다. 진술 순서와 길이에 따른 치우침을 점검한 뒤, 판결을 선고하겠습니다.` });
+    return lines;
+  }
+
+
+  // ===================== 형사재판 (자수하기: 나 혼자 피고인) =====================
+  const SOLO_ISSUES = [
+    { id: 'procrast', name: '미루기·마감', kws: ['마감', '미루', '미뤄', '과제', '논문', '공부', '벼락치기', '게임', '유튜브', '쇼츠', '넷플', '릴스'],
+      crime: '마감 직전까지 딴짓한 죄', clause: '중요한 일은 시작 시간부터 정한다', mission: '25분 집중 타이머 2번 돌리고 결과물 사진 인증하기' },
+    { id: 'spend', name: '충동 소비', kws: ['결제', '쇼핑', '지름', '질렀', '샀', '배달', '택배', '장바구니', '카드값', '충동'],
+      crime: '충동 결제죄', clause: '5만 원 넘는 결제는 하루 묵힌다', mission: '장바구니 하나 비우고 3일 동안 지출 기록하기' },
+    { id: 'life', name: '생활 습관', kws: ['늦잠', '야식', '밤새', '새벽', '운동', '라면', '치킨', '알람', '폰을 보'],
+      crime: '야행성 생활 방조죄', clause: '자기 전 30분은 폰을 멀리 둔다', mission: '오늘 밤 12시 전에 폰 내려놓고 인증하기' }
+  ];
+  const VICTIMS = ['친구', '엄마', '아빠', '부모님', '가족', '팀원', '동생', '언니', '오빠', '누나', '형이', '남친', '여친', '애인', '남자친구', '여자친구', '룸메', '교수님', '선배', '후배', '동기'];
+  const CLEX = {
+    intent: ['일부러', '귀찮아서', '하기 싫어서', '몰래', '모른 척', '그냥 안'],
+    accident: ['깜빡', '실수', '몰랐', '모르고', '잊어'],
+    remorse: ['반성', '후회', '미안', '죄송', '다시는', '앞으로']
+  };
+  const TIERS = [
+    { level: 0, name: '무죄', short: '무죄', desc: '이 정도는 무죄! 오늘은 스스로를 칭찬해 주세요.' },
+    { level: 1, name: '훈방', short: '훈방', desc: '판사님의 잔소리를 듣고 귀가합니다.' },
+    { level: 2, name: '벌금형', short: '벌금', desc: '양심 코인을 납부합니다.' },
+    { level: 3, name: '사회봉사형', short: '봉사', desc: '법원 앞 쓰레기 줍기 미니게임 + 교화 미션' },
+    { level: 4, name: '집행유예', short: '집유', desc: '반성문(AI 심사) + 교화 미션, 1주일간 자기 약속 관찰' },
+    { level: 5, name: '징역형', short: '징역', desc: '가상 감옥에서 교화 미션 3개를 마쳐야 출소합니다.' }
+  ];
+  const NAG = {
+    procrast: ['마감은 갑자기 오지 않습니다. 달력에 이미 적혀 있었어요.', '“5분만 더”는 법정 기록상 평균 47분입니다.', '오늘의 나를 내일의 나에게 떠넘기지 마세요.'],
+    spend: ['장바구니는 생각보다 기억력이 좋습니다.', '“할인이라서”는 무죄 사유가 아닙니다.', '통장도 감정이 있다는 걸 잊지 마세요.'],
+    life: ['새벽 2시의 라면은 내일 아침의 부은 얼굴로 돌아옵니다.', '알람은 끄라고 있는 게 아닙니다.', '잠은 미루면 이자가 붙습니다.'],
+    default: ['사소한 일도 쌓이면 사건이 됩니다.', '다음에도 같은 일로 법정에 서지 맙시다.', '본 판사는 당신을 믿습니다. 대충 믿습니다.']
+  };
+  function criminal(input, judgeKey) {
+    const name = input.name || '피고인', t = (input.text || '').trim(), last = (input.lastWord || '').trim();
+    const safety = safetyCheck(t + ' ' + last);
+    if (!safety.ok) return { blocked: true, safety };
+    const all = SOLO_ISSUES.concat(ISSUES);
+    const hits = all.map(is => ({ is, n: count(t, is.kws), at: Math.min(...is.kws.map(k => { const i = t.indexOf(k); return i < 0 ? 1e9 : i; })) }))
+      .filter(x => x.n > 0).sort((a, b) => b.n - a.n || a.at - b.at);
+    const main = (hits[0] || {}).is || { id: 'misc', name: '생활 속 사소한 잘못', crime: '사소한 양심 위반죄', clause: '같은 일이 생기면 먼저 말한다', mission: '오늘 안에 미뤄 둔 일 하나 끝내기' };
+    const victimWord = input.victim && input.victim !== '나 자신' ? input.victim : (VICTIMS.find(v => t.includes(v)) || null);
+    const f = lenFactor(t);
+    const F = {
+      issue: Math.min(4, hits.reduce((a, h) => a + h.n, 0)) , repeat: count(t, LEX.repeat) / f, intent: count(t, CLEX.intent) / f,
+      victim: victimWord ? 1 : 0, accident: count(t, CLEX.accident) / f, remorse: Math.min(2, count(t, CLEX.remorse)), reason: count(t, LEX.reason) / f, excuse: count(t, LEX.excuse) / f
+    };
+    const w = JUDGES[judgeKey || 'balance'].w;
+    F.act = 1.5 * F.issue + 4 * F.repeat + 3 * F.intent + 4 * F.victim;
+    F.mit = 2 * F.accident + 2 * F.reason + 3 * F.remorse;
+    F.att = 3 * F.excuse;
+    let G = 4 + w.act * F.act - Math.min(w.mit * F.mit, 0.6 * w.act * F.act) + w.att * F.att;
+    // 최후 진술: 사과문 심사 기준으로 정상참작(-3) 또는 괘씸죄(+3)
+    let lastEval = null, lastAdj = 0;
+    if (last) { lastEval = reviewApology(last); lastAdj = lastEval.pass ? -3 : (lastEval.ex > 0 ? 3 : 0); G += lastAdj; }
+    const tierOf = g => g < 6 ? 0 : g < 10 ? 1 : g < 14 ? 2 : g < 18 ? 3 : g < 22 ? 4 : 5;
+    const tier = TIERS[tierOf(G)];
+    const ask = TIERS[Math.min(5, Math.max(2, tierOf(G - lastAdj) + 1))]; // 검사 구형 (최후 진술 전, 최소 벌금형)
+    const gwaessim = F.excuse >= 2 || (lastEval && lastEval.ex > 0);
+    const coins = tier.level === 2 ? 10 + Math.round(G) : 0;
+    const ev = evidence(t, 'D');
+    const q = tag => (ev.find(e => e.tags.includes(tag)) || {}).s;
+    const remorseS = sentences(t).find(x => CLEX.remorse.some(k => x.includes(k)));
+    const missions = [];
+    if (tier.level === 0) missions.push({ kind: '보상', text: '무죄 기념: 오늘 잘한 일 한 가지를 스스로 칭찬하기', type: 'check' });
+    if (tier.level === 1) missions.push({ kind: '잔소리', text: '판사님 잔소리 3줄 끝까지 듣기', type: 'nag', nag: NAG[main.id] || NAG.default });
+    if (tier.level === 2) missions.push({ kind: '벌금', text: `양심 코인 ${coins}개 납부`, type: 'fine', coins });
+    if (tier.level === 3) missions.push({ kind: '사회봉사', text: '법원 앞 쓰레기 8개를 15초 안에 줍기 (미니게임)', type: 'game' });
+    if (tier.level >= 4) missions.push({ kind: '반성문', text: '인정 → 영향 → 다음엔 어떻게 할지, 세 문장 반성문 (AI 심사)', type: 'apology' });
+    if (tier.level >= 2) missions.push({ kind: '교화 미션', text: main.mission, type: 'check' });
+    if (tier.level >= 4) missions.push({ kind: '자기 약속', text: `1주일 동안 지키기: “${main.clause}”`, type: 'check' });
+    if (tier.level === 5) missions.push({ kind: '감옥 청소', text: '내 방(책상) 5분 정리하고 인증', type: 'check' });
+    if (victimWord && tier.level >= 1) missions.push({ kind: '피해 회복', text: `${victimWord}에게 “미안해, 다음엔 ~할게” 메시지 보내기`, type: 'check' });
+    if (gwaessim && tier.level >= 1) missions.push({ kind: '괘씸죄', text: '변명이 많아 괘씸죄 추가! 랜덤 벌칙 룰렛 돌리기', type: 'roulette' });
+    const script = [
+      { role: 'J', text: `지금부터 피고인 ${name}의 ‘${main.crime}’ 사건 재판을 시작합니다. 피고인은 스스로 자수했습니다. 검사, 공소 사실을 말씀하세요.` },
+      { role: 'P', text: `피고인은 이렇게 진술했습니다. “${q('지목') || q('반복') || (ev[0] || {}).s || t.slice(0, 60)}”${F.repeat ? ' 게다가 이번이 처음이 아닙니다. 상습성이 인정됩니다!' : ''}${victimWord ? ` 이 일로 ${victimWord}까지 피해를 봤습니다.` : ''}` },
+      { role: 'D', text: q('사정') ? `이의 있습니다! 피고인에게도 사정이 있었습니다. “${q('사정')}”` : (F.accident ? '이의 있습니다! 피고인은 일부러 그런 것이 아닙니다. 단순한 실수였습니다.' : '이의 있습니다! 누구에게나 그런 날이 있습니다. 피고인은 평소 성실한 시민입니다… 아마도요.') },
+      { role: 'P', text: q('변명') ? `“${q('변명')}” 이 말을 들어 보십시오. 반성의 기미가 보이지 않습니다!` : (victimWord ? `사정이 있었다 해도, 결과적으로 ${victimWord}의 시간과 마음이 낭비됐습니다.` : '사정이 있었다 해도, 결국 피해자는 미래의 피고인 자신입니다!') },
+      { role: 'D', text: remorseS ? `피고인은 이미 “${remorseS}”라고 반성하고 있습니다. 재판장님, 선처를 부탁드립니다.` : '피고인이 스스로 법정에 나왔다는 것 자체가 반성의 증거입니다. 선처를 부탁드립니다.' },
+      { role: 'P', text: `검찰은 피고인 ${name}에게 ${josa(ask.name, '을', '를')} 구형합니다!` },
+      { role: 'J', text: '피고인, 마지막으로 할 말이 있습니까? (최후 진술은 판결에 반영됩니다)', input: true }
+    ];
+    return { mode: 'criminal', blocked: false, judge: JUDGES[judgeKey || 'balance'], judgeKey: judgeKey || 'balance', name, main, crime: main.crime,
+      victim: victimWord, F, G, tier, ask, gwaessim, coins, lastEval, lastAdj, missions, clause: main.clause, script,
+      reasons: ev.sort((a, b) => b.w - a.w).slice(0, 3), guilty: tier.level > 0, nag: NAG[main.id] || NAG.default };
+  }
+  const ROULETTE = ['다음 날 아침 기상 인증샷', '친구에게 오늘의 감사 한 줄 보내기', '스쿼트 20개', '물 2L 마시기 인증', '휴대폰 배경화면을 ‘반성 중’으로 하루 바꾸기', '방 창문 열고 3분 환기'];
+
+  // 사과문(반성문) 심사: 인정·영향·재발방지 3요소 + 변명 감점
+  function reviewApology(t) {
+    const has = (l) => l.some(k => t.includes(k));
+    const c1 = has(['미안', '잘못', '죄송', '내 탓', '인정', '반성', '후회']);
+    const c2 = has(['서운', '속상', '힘들', '기다', '때문에 네가', '너를', '네가', '널']);
+    const c3 = has(['앞으로', '다음부터', '다음엔', '이제부터', '꼭', '약속할게', '하겠']);
+    const ex = count(t, ['근데', '그래도', '어쩔 수', '원래', '너도']);
+    const score = (c1 ? 40 : 0) + (c2 ? 30 : 0) + (c3 ? 30 : 0) - ex * 15;
+    const pass = score >= 70;
+    return { c1, c2, c3, ex, score: Math.max(0, score), pass,
+      comment: pass ? '사과 인정. 교화가 확인되어 형 집행을 완료합니다.'
+        : !c1 ? '잘못을 인정하는 문장이 없습니다. 재작성을 명합니다.'
+        : ex > 0 ? '사과 속에 변명(“근데”, “너도” 등)이 섞여 있습니다. 변명을 빼고 다시 써주세요.'
+        : !c3 ? '다음엔 어떻게 할지가 빠졌습니다. 재발 방지 약속을 한 문장 추가하세요.'
+        : '상대가 어떤 마음이었을지 한 문장 더 적어 주세요.' };
+  }
+
+  const api = { josa, ISSUES, SOLO_ISSUES, TIERS, ROULETTE, ESTIMATE, LEX, JUDGES, judge, criminal, ratio, features, safetyCheck, reviewApology, issueHits, evidence };
+  root.CourtEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* 인생재판소 도트 스프라이트 (오리지널 캐릭터) — 16×16 픽셀 격자 → SVG */
+(function (root) {
+  const PAL = {
+    k: '#2b2140', w: '#ffffff', o: '#ffa53a', y: '#ffd34d', p: '#ff9db1', n: '#2b2140',
+    // 부엉 판사
+    b: '#9a6b4b', B: '#6f4a33', l: '#f6dcae', r: '#433b66', R: '#2f2a4d', c: '#ffffff',
+    // 냥 검사
+    f: '#ffb35c', F: '#e5893a', s: '#ff5a5f', S: '#cf3d47',
+    // 멍 변호사
+    d: '#a8744d', D: '#7d5236', e: '#fbe8c8', u: '#4aa3ff', U: '#2c7fd6',
+    g: '#9aa0b5', G: '#6b7088'
+  };
+  const SP = {
+    judge: [
+      '................',
+      '...kk......kk...',
+      '..kbBk....kBbk..',
+      '..kbbbkkkkbbbk..',
+      '.kbbbbbbbbbbbbk.',
+      '.kbyyybbbbyyybk.',
+      'kbywwwyllywwwybk',
+      'kbywkwyllywkwybk',
+      'kbbyyylooolyyybk',
+      '.kbbbllOOOllbbk.',
+      '.kRrrrcclccrrrRk',
+      'kRrrrrrcccrrrrrk',
+      'kRrrrryrrryrrrRk',
+      'kRRrrrrrrrrrrRRk',
+      '.kRRRRRRRRRRRRk.',
+      '..kkkkkkkkkkkk..'
+    ],
+    cat: [
+      '................',
+      '..kk........kk..',
+      '.kfFk......kFfk.',
+      '.kfpfkkkkkkfpfk.',
+      '.kffffFffFffffk.',
+      'kffffffffffffffk',
+      'kffkkkffffkkkffk',
+      'kfffwkffffkwfffk',
+      'kfppfffkkfffppfk',
+      '.kffffkfOkffffk.',
+      '..kkffffffffkk..',
+      '.kSsswwyywwsssSk',
+      'kSssssswyysssssk',
+      'kSsssssyysssssSk',
+      '.kSSssssssssSSk.',
+      '..kkkkkkkkkkkk..'
+    ],
+    dog: [
+      '................',
+      '....kkkkkkkk....',
+      '..kkeeeeeeeekk..',
+      '.kDdeeeeeeeedDk.',
+      'kDddeeeeeeeeddDk',
+      'kDddewkeekweddDk',
+      'kDddekkeekkeddDk',
+      'kDdeeeeeeeeeedDk',
+      '.kDeppeenneeppDk',
+      '.kkeeeeeOOeeeekk',
+      '..kkeeeeeeeekk..',
+      '.kUuuuwwyywuuuUk',
+      'kUuuuuuwyyuuuuuk',
+      'kUuuuuuyyuuuuuUk',
+      '.kUUuuuuuuuuUUk.',
+      '..kkkkkkkkkkkk..'
+    ],
+    gavel: [
+      '............',
+      '.kkkkkkkkkk.',
+      'kbBBbbbbBBbk',
+      'kbBBbbbbBBbk',
+      'kbBBbbbbBBbk',
+      '.kkkkkkkkkk.',
+      '.....kk.....',
+      '....kbbk....',
+      '....kbbk....',
+      '....kbbk....',
+      '....kbbk....',
+      '.....kk.....'
+    ],
+    coin: ['..kkkk..', '.kyyyyk.', 'kyywyyyk', 'kywyyyyk', 'kyyyyoyk', 'kyyyyoyk', '.kyoooк.'.replace('к', 'k'), '..kkkk..'],
+    heart: ['........', '.kk..kk.', 'kssksssk', 'kswssssk', 'kssssssk', '.kssssk.', '..kssk..', '...kk...'],
+    star: ['...kk...', '...ky...', 'kkkyykkk', 'kyyyyyyk', '.kyyyyk.', '.kyykyk.', 'kyk..kyk', 'kk....kk'],
+    trash: ['..kkkk..', '.kggggk.', 'kkkkkkkk', '.kgGgGk.', '.kgGgGk.', '.kgGgGk.', '.kgGgGk.', '..kkkk..'],
+    scroll: ['.kkkkkk.', 'klllllk.', '.kllllk.', '.klkklk.', '.kllllk.', '.klkklk.', '.kllllk.', 'kkkkkkk.']
+  };
+  // 말하는 프레임: 입(O)을 벌림
+  function grid(name, talk) { return SP[name].map(row => row.replace(/O/g, talk ? 'k' : (name === 'judge' ? 'o' : (name === 'cat' ? 'f' : 'e')))); }
+  function svg(name, scale, opt) {
+    opt = opt || {}; const g = grid(name, opt.talk); const h = g.length, w = g[0].length; const pal = Object.assign({}, PAL, opt.pal || {});
+    let rects = '';
+    g.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const ch = row[x]; if (ch === '.' || !pal[ch]) continue; rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`; } });
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w * scale}" height="${h * scale}" shape-rendering="crispEdges" style="image-rendering:pixelated">${rects}</svg>`;
+  }
+  // 동그란 떡 캐릭터 (사용자 아바타) — 원·눈·볼터치를 계산으로 그림
+  function blob(color, scale, opt) {
+    opt = opt || {}; const W = 16, H = 16; const dark = opt.dark || '#2b2140';
+    let rects = ''; const px = (x, y, c) => { rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; };
+    const inside = (x, y) => { const dx = (x + 0.5 - 8) / 7, dy = (y + 0.5 - 10) / 5.6; return dx * dx + dy * dy <= 1; };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (inside(x, y)) { const edge = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1); px(x, y, edge ? dark : color); }
+    }
+    px(5, 7, '#ffffff99'); px(6, 6, '#ffffff99');
+    if (opt.sad) { px(5, 10, dark); px(10, 10, dark); px(4, 9, dark); px(11, 9, dark); } else { px(5, 9, dark); px(5, 10, dark); px(10, 9, dark); px(10, 10, dark); }
+    px(3, 11, '#ff9db1'); px(12, 11, '#ff9db1');
+    if (opt.talk) { px(7, 12, dark); px(8, 12, dark); px(7, 13, '#ff5a5f'); px(8, 13, '#ff5a5f'); } else { px(7, 12, dark); px(8, 12, dark); }
+    if (opt.crown) { px(6, 3, '#ffd34d'); px(8, 2, '#ffd34d'); px(10, 3, '#ffd34d'); for (let x = 6; x <= 10; x++) px(x, 4, '#ffd34d'); }
+    if (opt.jail) { for (let x = 1; x < 16; x += 3) for (let y = 1; y < 16; y++) px(x, y, '#6b7088'); for (let x = 0; x < 16; x++) { px(x, 1, '#6b7088'); px(x, 15, '#6b7088'); } }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${16 * scale}" height="${16 * scale}" shape-rendering="crispEdges" style="image-rendering:pixelated">${rects}</svg>`;
+  }
+  const api = { svg, blob, PAL, SP };
+  root.Pix = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+const PRESETS = {
+ duo: [
+  { label:'연인 · 1주년 예약', rel:'연인',
+   A:{name:'지은', text:'다음 주가 1주년이라 민호한테 식당 예약을 부탁했는데 또 까먹었어. 지난번 생일 때도 그랬고 맨날 "내가 할게" 하고 안 해. 결국 어제 내가 급하게 다른 데 예약했어. 서운하다고 했더니 "그게 뭐 그렇게 큰일이야"라고 해서 더 화났어.'},
+   B:{name:'민호', text:'예약 까먹은 건 내 잘못 맞아, 미안해. 근데 이번 주 내내 야근이라 정신이 없었어. 그리고 큰일이냐고 한 건 무시하려던 게 아니라 내가 더 좋은 데 다시 잡겠다는 뜻이었는데, 말투가 별로였던 것 같아.'}},
+  { label:'룸메이트 · 설거지 당번', rel:'룸메이트',
+   A:{name:'서연', text:'화요일 설거지 당번이 하린인데 3일째 안 했어. 싱크대에서 냄새가 나. 카톡으로 두 번 말했는데 읽씹했어. 항상 이런 식이야.'},
+   B:{name:'하린', text:'시험 기간이라 계속 새벽 2시에 들어왔어. 주말에 몰아서 하겠다고 미리 말했었어. 카톡은 바빠서 못 본 거고. 근데 서연이도 지난주 분리수거 안 했잖아.'}},
+  { label:'팀플 · 발표자료 마감', rel:'팀플',
+   A:{name:'유나', text:'발표 자료 마감이 어제 밤 12시였는데 준호가 자기 파트 PPT 3장을 아침 9시에 보냈어. 회의도 두 번 빠졌고 연락도 늦어. 매번 내가 마지막에 다 정리해.'},
+   B:{name:'준호', text:'늦은 건 미안해. 알바 끝나고 새벽에 하느라 그랬어. 회의 빠진 건 미리 양해 구했어. 그리고 역할 정할 때 유나가 최종 정리 맡겠다고 했잖아.'}},
+  { label:'친구 · 생일파티 회비 정산', rel:'친구',
+   A:{name:'다은', text:'지난주 생일파티 회비를 내가 먼저 다 냈어. 단톡방에 정산 금액을 올렸는데 승민이만 아직 안 보냈어. 두 번 말했는데 이번에도 읽씹이야.'},
+   B:{name:'승민', text:'보낸 줄 알았는데 송금 버튼을 안 누른 거였어. 미안해, 지금 바로 보낼게. 근데 단톡방에서 내 이름만 콕 집어서 말한 건 좀 민망했어.'}},
+  { label:'가족 · 주말 집안일', rel:'가족',
+   A:{name:'누나', text:'주말마다 청소랑 빨래는 내가 다 하는데 동생은 매번 점심때 일어나. 이번 주는 분리수거도 안 했어.'},
+   B:{name:'동생', text:'평일엔 알바 때문에 늦게 들어와서 피곤했어. 그건 까먹은 거 맞아, 미안. 대신 다음 주는 내가 다 맡을게.'}}
+ ],
+ solo: [
+  { label:'친구 · 카톡 3일 읽씹', rel:'친구', A:{name:'서연', text:'하린이가 내 카톡을 3일째 읽씹했어. 생일 축하 메시지까지 보냈는데 답이 없어. 항상 이런 식이라 서운해.'}, B:{name:'하린', text:''}},
+  { label:'가족 · 정산 안 함', rel:'가족', A:{name:'동생', text:'언니가 같이 시킨 배달 음식 정산을 2주째 안 해. 계속 "나중에 줄게"래. 벌써 두 번째야.'}, B:{name:'언니', text:''}},
+  { label:'연인 · 약속 지각', rel:'연인', A:{name:'지은', text:'영화 시간에 맞춰 만나기로 했는데 민호가 40분 늦었어. 연락도 없이 늦어서 영화 앞부분을 놓쳤어.'}, B:{name:'민호', text:''}},
+  { label:'룸메이트 · 새벽 통화 소음', rel:'룸메이트', A:{name:'지우', text:'룸메가 새벽까지 헤드셋 없이 게임하면서 통화해. 시끄럽다고 몇 번 말했는데 그때뿐이고 또 그래.'}, B:{name:'룸메', text:''}}
+ ],
+ crim: [
+  { label:'마감 전날 게임', name:'예인', victim:'나 자신', text:'논문 마감이 내일인데 어제 새벽까지 게임했어. 지난주에도 그랬어. 근데 원래 마감 전날에 집중이 잘 되는 편이라.'},
+  { label:'친구 카톡 방치', name:'예인', victim:'친구', text:'친구 카톡을 3일 동안 답장 안 했어. 바빠서 깜빡했어. 미안해.'},
+  { label:'새벽 라면', name:'예인', victim:'나 자신', text:'오늘 새벽 2시에 야식으로 라면 먹었어.'},
+  { label:'단톡방 답장 미루기', name:'예인', victim:'친구', text:'친구들이 단톡방에서 모임 날짜를 정하는데 이틀째 읽기만 하고 답장을 안 했어. 귀찮아서 미뤘어.'}
+ ]
+};
+
+</script>
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const E = window.CourtEngine, X = window.Pix;
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const COLORS = { A: '#7cc4ff', B: '#ff9db1', D: '#ffd34d' };
+
+// ---------- 저장 (브라우저별, 실패해도 게임은 진행) ----------
+const KEY = 'insaeng-court-v1';
+let save = { exp: 0, coins: 30, cases: [], sound: true };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) save = Object.assign(save, s); } catch (e) {}
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+// ---------- 효과음 (WebAudio 8비트) ----------
+let AC = null;
+function tone(freq, dur, type, vol, when) {
+  if (!save.sound) return; try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = AC.currentTime + (when || 0), o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(freq, t0); g.gain.setValueAtTime(vol || 0.04, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  } catch (e) {}
+}
+const sfx = {
+  blip: (r) => tone(r === 'J' ? 330 : r === 'P' || r === 'B' ? 520 : r === 'D' || r === 'A' ? 440 : 600, 0.03, 'square', 0.025),
+  sel: () => tone(880, 0.06, 'square', 0.04),
+  ok: () => { tone(660, 0.08); tone(990, 0.12, 'square', 0.04, 0.08); },
+  obj: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.09, 'square', 0.06, i * 0.06)); },
+  gavel: () => { tone(110, 0.18, 'triangle', 0.25); tone(70, 0.25, 'sine', 0.2, 0.02); },
+  fan: () => { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, 0.12, 'square', 0.05, i * 0.11)); },
+  bad: () => { tone(300, 0.12, 'sawtooth', 0.04); tone(200, 0.2, 'sawtooth', 0.04, 0.12); },
+  coin: () => { tone(988, 0.05); tone(1319, 0.12, 'square', 0.04, 0.05); }
+};
+
+// ---------- HUD ----------
+const lvOf = e => 1 + Math.floor(e / 100);
+function hud() {
+  $('#hudLv').textContent = 'Lv.' + lvOf(save.exp); $('#hudExp').style.width = (save.exp % 100) + '%';
+  $('#hudCoin').textContent = save.coins; $('#hudCase').textContent = save.cases.length;
+  $('#btnSound').textContent = save.sound ? '♪ ON' : '♪ OFF';
+}
+$('#hudGavel').innerHTML = X.svg('gavel', 2); $('#hudCoinIc').innerHTML = X.svg('coin', 2); $('#hudCaseIc').innerHTML = X.svg('scroll', 2);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); }
+function gain(exp, coins, why) {
+  const before = lvOf(save.exp); save.exp += exp; save.coins += coins; persist(); hud();
+  toast(`${why ? why + ' · ' : ''}EXP +${exp}${coins ? ' · 코인 ' + (coins > 0 ? '+' : '') + coins : ''}`);
+  if (lvOf(save.exp) > before) setTimeout(() => { sfx.fan(); toast(`LEVEL UP! Lv.${lvOf(save.exp)}`); }, 900);
+}
+hud();
+
+// ---------- 화면 전환 ----------
+function show(id) { $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); window.scrollTo(0, 0); }
+$('#goHome').onclick = () => show('select');
+
+// ---------- 타이틀 ----------
+(function stars() { let h = ''; for (let i = 0; i < 40; i++) h += `<b style="left:${Math.random() * 100}%;top:${Math.random() * 100}%;animation-delay:${(Math.random() * 2).toFixed(2)}s"></b>`; $('#stars').innerHTML = h; })();
+$('#cast').innerHTML = `<div>${X.svg('cat', 4)}<br>냥 검사</div><div>${X.svg('judge', 6)}<br>부엉 판사</div><div>${X.svg('dog', 4)}<br>멍 변호사</div><div>${X.blob(COLORS.A, 3)}${X.blob(COLORS.B, 3)}<br>당신과 상대</div>`;
+function start() { sfx.ok(); show('select'); }
+$('#press').onclick = start; $('#title').onclick = e => { if (e.target.id !== 'press') start(); };
+
+// ---------- 모드 선택 ----------
+let mode = 'duo';
+$$('[data-pics]').forEach(el => {
+  const m = el.dataset.pics;
+  el.innerHTML = m === 'duo' ? X.blob(COLORS.A, 4) + X.svg('judge', 4) + X.blob(COLORS.B, 4)
+    : m === 'solo' ? X.blob(COLORS.A, 4) + X.svg('judge', 4) + X.blob('#d8d2ea', 4, { sad: true })
+    : X.svg('cat', 4) + X.blob(COLORS.D, 4, { sad: true }) + X.svg('dog', 4);
+});
+function selMode(m) { mode = m; $$('.mode').forEach(x => x.classList.toggle('sel', x.dataset.mode === m)); }
+selMode('duo');
+$$('.mode').forEach(x => { x.onclick = () => { sfx.sel(); if (x.classList.contains('sel')) openIntake(); else selMode(x.dataset.mode); }; });
+$('#selGo').onclick = () => openIntake();
+$('#backTitle').onclick = () => show('title');
+document.addEventListener('keydown', e => {
+  const on = ($('.screen.on') || {}).id;
+  if (on === 'title' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); start(); }
+  else if (on === 'select') { const order = ['duo', 'solo', 'crim']; let i = order.indexOf(mode);
+    if (['ArrowDown', 'ArrowRight'].includes(e.key)) { selMode(order[(i + 1) % 3]); sfx.sel(); }
+    if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { selMode(order[(i + 2) % 3]); sfx.sel(); }
+    if (e.key === 'Enter') openIntake(); }
+  else if (on === 'court' && (e.key === ' ' || e.key === 'Enter') && document.activeElement.tagName !== 'TEXTAREA') { e.preventDefault(); advance(); }
+});
+
+// ---------- 접수 ----------
+const MODE_INFO = {
+  duo: { title: 'CASE FILE · 같이 재판 (2P)', desc: '내 진술을 쓰고 <b>반론 요청 링크</b>를 상대에게 보내세요. 시연할 때는 오른쪽 칸에 상대 진술을 직접 넣어도 돼요.' },
+  solo: { title: 'CASE FILE · 혼자 사연 접수 (1P)', desc: '나 혼자 사연을 씁니다. 상대 측 변호인이 상대의 입장을 <b>추정</b>해 변론하고, 판결은 보수적으로 조정돼요.' },
+  crim: { title: 'CONFESSION · 자수하기 (1P · 형사)', desc: '내가 저지른 사소한 잘못을 자백하세요. <b>냥 검사</b>가 기소하고 <b>멍 변호사</b>가 변호합니다. 최후 진술도 판결에 반영돼요.' }
+};
+function openIntake() {
+  sfx.ok(); show('intake'); $('#inTitle').textContent = MODE_INFO[mode].title; $('#inDesc').innerHTML = MODE_INFO[mode].desc;
+  $('#formCivil').style.display = mode === 'crim' ? 'none' : ''; $('#formCrim').style.display = mode === 'crim' ? '' : 'none';
+  $('#btnInvite').style.display = mode === 'duo' ? '' : 'none';
+  $('#textB').style.display = mode === 'solo' ? 'none' : ''; $('#soloNote').style.display = mode === 'solo' ? '' : 'none';
+  $('#bLabel').textContent = mode === 'solo' ? '상대방 (B) · 진술 없음' : '상대방 (B) · 반론서';
+  $('#presets').innerHTML = ''; (PRESETS[mode] || []).forEach(p => { const b = document.createElement('button'); b.className = 'pbtn sm ghost'; b.textContent = '예시: ' + p.label; b.onclick = () => fill(p); $('#presets').appendChild(b); });
+  $('#inviteOut').textContent = '';
+}
+$('#avA').innerHTML = X.blob(COLORS.A, 2); $('#avB').innerHTML = X.blob(COLORS.B, 2);
+function fill(p) {
+  sfx.sel();
+  if (mode === 'crim') { $('#nameD').value = p.name; $('#textD').value = p.text; $('#victim').value = p.victim; return; }
+  $('#rel').value = p.rel; $('#nameA').value = p.A.name; $('#textA').value = p.A.text; $('#nameB').value = p.B.name; $('#textB').value = mode === 'solo' ? '' : p.B.text;
+}
+$('#backSel').onclick = () => show('select');
+const b64e = o => btoa(unescape(encodeURIComponent(JSON.stringify(o)))), b64d = s => JSON.parse(decodeURIComponent(escape(atob(s))));
+$('#btnInvite').onclick = () => {
+  const o = { rel: $('#rel').value, A: { name: $('#nameA').value || 'A', text: $('#textA').value }, Bname: $('#nameB').value || 'B' };
+  if (!o.A.text.trim()) { $('#inviteOut').textContent = '먼저 신청인 진술을 적어 주세요.'; return; }
+  const url = location.href.split('#')[0] + '#invite=' + b64e(o);
+  $('#inviteOut').innerHTML = '반론 요청 링크 완성! <a href="' + esc(url) + '" target="_blank" style="color:var(--blue2)">링크 열기</a> — 상대가 열면 신청인 진술은 잠기고 반론서 칸만 열려요.';
+  try { navigator.clipboard.writeText(url).then(() => toast('링크를 복사했어요')).catch(() => {}); } catch (e) {}
+  sfx.coin();
+};
+(function invite() {
+  const m = location.hash.match(/invite=([^&]+)/); if (!m) return;
+  try { const o = b64d(m[1]); mode = 'duo'; openIntake(); $('#rel').value = o.rel; $('#nameA').value = o.A.name; $('#textA').value = o.A.text; $('#nameB').value = o.Bname;
+    $('#nameA').readOnly = $('#textA').readOnly = true; $('#partyB').classList.add('ask');
+    const n = $('#inviteNote'); n.style.display = ''; n.innerHTML = `<b>${esc(o.Bname)}</b>님! <b>${esc(o.A.name)}</b>님이 인생재판소에 사건을 접수했어요. 오른쪽 반론서를 써 주세요. 양쪽 이야기를 다 들어야 공정한 판결이 나와요.`;
+  } catch (e) {}
+})();
+
+// ---------- 재판 상태 ----------
+const st = { mode: 'duo', input: null, r: null, first: null, idx: 0, typing: false, auto: null, caseNo: '', log: [], engine: 'demo', key: '', model: 'claude-sonnet-4-5', lastDone: false };
+$('#btnStart').onclick = async () => {
+  st.mode = mode; st.first = null; st.log = []; st.lastDone = false;
+  st.caseNo = '2026인생-' + String(Math.floor(1000 + Math.random() * 9000));
+  if (mode === 'crim') {
+    st.input = { name: $('#nameD').value.trim() || '피고인', text: $('#textD').value.trim(), victim: $('#victim').value };
+    if (st.input.text.length < 6) { $('#inviteOut').textContent = '자백서를 조금 더 적어 주세요.'; return; }
+  } else {
+    st.input = { rel: $('#rel').value, A: { name: $('#nameA').value.trim() || 'A', text: $('#textA').value.trim() }, B: { name: $('#nameB').value.trim() || 'B', text: mode === 'solo' ? '' : $('#textB').value.trim() } };
+    if (st.input.A.text.length < 6) { $('#inviteOut').textContent = '신청인 진술을 조금 더 적어 주세요.'; return; }
+  }
+  await runTrial('balance');
+};
+function evaluate(judgeKey) { return st.mode === 'crim' ? E.criminal(st.input, judgeKey) : E.judge(st.input, judgeKey); }
+async function runTrial(judgeKey) {
+  let r = evaluate(judgeKey);
+  if (r.blocked) { $('#blockHits').textContent = r.safety.hits.map(h => '“' + h + '”').join(', '); renderEngine(r); sfx.bad(); show('block'); return; }
+  if (st.engine === 'llm') {
+    $('#btnStart').disabled = true; $('#btnStart').textContent = 'LLM 법정 준비 중…';
+    try { r = await llmTrial(r); } catch (e) { r.llmError = String(e.message || e); }
+    $('#btnStart').disabled = false; $('#btnStart').textContent = '개정! 재판 시작 ▶';
+  }
+  st.r = r; if (!st.first) st.first = r; renderEngine(r);
+  setupCourt(); show('court'); st.idx = 0; $('#btnVerdict').style.display = 'none'; $('#btnNext').disabled = false; advance();
+}
+$('#blockBack').onclick = () => show('intake');
+
+// ---------- 법정 ----------
+const ROLE = () => st.mode === 'crim'
+  ? { J: { id: 'cJ', nm: '부엉 판사', spr: 'judge' }, P: { id: 'cL', nm: '냥 검사', spr: 'cat' }, D: { id: 'cR', nm: '멍 변호사', spr: 'dog' }, U: { id: 'cD', nm: st.input.name + ' (피고인)' } }
+  : { J: { id: 'cJ', nm: '부엉 판사', spr: 'judge' }, A: { id: 'cL', nm: st.input.A.name + ' 측 변호인', spr: 'dog' }, B: { id: 'cR', nm: st.input.B.name + ' 측 변호인', spr: 'cat' }, U: { id: 'cPA', nm: '이의' } };
+function sprite(role, talk) {
+  const R = ROLE()[role]; if (!R) return '';
+  const sc = innerWidth < 640 ? 3.5 : 4.5;
+  if (role === 'J') return X.svg('judge', sc + 1, { talk });
+  return X.svg(R.spr, sc, { talk });
+}
+function setupCourt() {
+  const R = ROLE(), crim = st.mode === 'crim';
+  $('#caseTitle').textContent = crim ? `사건 ${st.caseNo} · ${st.r.crime}` : `사건 ${st.caseNo} · ${st.r.main.name} 분쟁`;
+  $('#judgeTag').textContent = st.r.judge.name + (st.r.llm ? ' · LLM' : '') + (st.r.llmError ? ' · LLM 오류→데모' : '');
+  $('.flag').textContent = crim ? '형사 법정' : '공정 · 화해';
+  ['J', crim ? 'P' : 'A', crim ? 'D' : 'B'].forEach(k => { $('#' + R[k].id).innerHTML = sprite(k, false) + `<br><span class="nm">${esc(R[k].nm)}</span>`; });
+  const sc = innerWidth < 640 ? 3 : 4;
+  if (crim) { $('#cD').innerHTML = X.blob(COLORS.D, sc + 1, { sad: true }) + `<br><span class="nm">${esc(st.input.name)} (피고인)</span>`; $('#cPA').innerHTML = $('#cPB').innerHTML = ''; }
+  else { $('#cD').innerHTML = ''; $('#cPA').innerHTML = X.blob(COLORS.A, sc) + `<br><span class="nm">${esc(st.input.A.name)}</span>`;
+    $('#cPB').innerHTML = X.blob(st.mode === 'solo' ? '#d8d2ea' : COLORS.B, sc, { sad: st.mode === 'solo' }) + `<br><span class="nm">${esc(st.input.B.name)}${st.mode === 'solo' ? ' (부재)' : ''}</span>`; }
+  $('#objSides').style.display = crim ? 'none' : ''; $('#objAName').textContent = crim ? '' : st.input.A.name; $('#objBName').textContent = crim ? '' : st.input.B.name;
+  $('#dInp').style.display = 'none';
+}
+let typeTimer = null, flap = null;
+function say(role, text, cb) {
+  const R = ROLE(); const nm = role === 'U' ? '추가 진술' : (R[role] || {}).nm || '';
+  $('#dName').textContent = nm; $('#dName').style.background = role === 'J' ? 'var(--gold)' : (role === 'P' || role === 'B') ? 'var(--red)' : (role === 'D' || role === 'A') ? 'var(--blue)' : 'var(--mint)';
+  $('#dName').style.color = role === 'J' || role === 'U' ? 'var(--ink)' : '#fff';
+  st.log.push({ nm, text });
+  $$('.chr').forEach(c => { c.classList.remove('talk'); c.classList.add('dim'); });
+  const el = R[role] && $('#' + R[role].id); if (el) { el.classList.remove('dim'); el.classList.add('talk'); }
+  if (role === 'U') $$('.chr').forEach(c => c.classList.remove('dim'));
+  let i = 0, open = false; st.typing = true; $('#dNext').style.visibility = 'hidden'; $('#dTxt').textContent = '';
+  clearInterval(typeTimer); clearInterval(flap);
+  if (el && R[role].spr) flap = setInterval(() => { open = !open; el.firstElementChild.outerHTML = sprite(role, open); }, 140);
+  typeTimer = setInterval(() => {
+    i += 1; $('#dTxt').textContent = text.slice(0, i); if (i % 2 === 0) sfx.blip(role);
+    if (i >= text.length) finish();
+  }, 24);
+  function finish() { clearInterval(typeTimer); clearInterval(flap); $('#dTxt').textContent = text; st.typing = false; $('#dNext').style.visibility = '';
+    if (el && R[role].spr) { el.firstElementChild.outerHTML = sprite(role, false); el.classList.remove('talk'); } cb && cb(); }
+  say.finish = finish;
+}
+function advance() {
+  if (st.typing) { say.finish(); return; }
+  if ($('#dInp').style.display !== 'none') return;
+  const s = st.r.script;
+  if (st.idx < s.length) {
+    const line = s[st.idx++]; const r = line.role === 'D' || line.role === 'P' || line.role === 'J' || line.role === 'A' || line.role === 'B' ? line.role : 'J';
+    if (/^이의 있습니다/.test(line.text)) { objFx(); }
+    say(r, line.text, () => { if (line.input && !st.lastDone) { stopAuto(); $('#dInp').style.display = ''; $('#lastWord').focus(); } });
+  }
+  if (st.idx >= s.length && !(s[s.length - 1] || {}).input) endScript();
+  else if (st.idx >= s.length && st.lastDone) endScript();
+}
+function endScript() { $('#btnNext').disabled = true; $('#btnVerdict').style.display = ''; stopAuto(); }
+$('#dbox').onclick = e => { if (e.target.closest('#dInp')) return; advance(); };
+$('#btnNext').onclick = advance;
+function stopAuto() { clearInterval(st.auto); st.auto = null; $('#btnAuto').textContent = 'AUTO'; }
+$('#btnAuto').onclick = () => { if (st.auto) return stopAuto(); advance(); st.auto = setInterval(() => { if (!st.typing) advance(); }, 1600); $('#btnAuto').textContent = 'STOP'; };
+$('#btnLog').onclick = () => { $('#logBody').innerHTML = st.log.map(l => `<p><b>${esc(l.nm)}</b> ${esc(l.text)}</p>`).join(''); $('#mLog').classList.add('on'); };
+// 최후 진술 (형사)
+function afterLast(text) {
+  st.lastDone = true; $('#dInp').style.display = 'none';
+  st.input.lastWord = text || ''; const prevTier = st.r.tier; const r = E.criminal(st.input, st.r.judgeKey); r.script = st.r.script; r.llm = st.r.llm; st.r = r; if (!st.first || st.first.mode === 'criminal') st.first = r; renderEngine(r);
+  if (text) { st.log.push({ nm: st.input.name + ' (피고인)', text }); }
+  const msg = !text ? '최후 진술 없음. 기록에 남기겠습니다. 이제 판결을 선고하겠습니다.'
+    : r.lastAdj < 0 ? '진심 어린 반성이 느껴집니다. 정상 참작하겠습니다. 이제 판결을 선고하겠습니다.'
+    : r.lastAdj > 0 ? '최후 진술에도 변명이 섞여 있군요… 괘씸죄를 검토하겠습니다. 판결을 선고합니다.' : '잘 들었습니다. 이제 판결을 선고하겠습니다.';
+  if (text) { $$('.chr').forEach(c => c.classList.add('dim')); }
+  say('J', msg, endScript);
+}
+$('#lastGo').onclick = () => afterLast($('#lastWord').value.trim());
+$('#lastSkip').onclick = () => afterLast('');
+
+// ---------- 이의 있음 ----------
+function objFx() { sfx.obj(); const f = $('#objFx'); f.style.display = 'grid'; const b = f.firstElementChild; b.style.animation = 'none'; b.offsetHeight; b.style.animation = ''; const fl = document.createElement('div'); fl.className = 'flash'; document.body.appendChild(fl); setTimeout(() => fl.remove(), 300); $('#stage').classList.remove('shake'); $('#stage').offsetHeight; $('#stage').classList.add('shake'); setTimeout(() => f.style.display = 'none', 950); }
+$('#btnObj').onclick = () => { objFx(); stopAuto(); $('#objBox').style.display = ''; $('#objText').focus(); };
+$('#objCancel').onclick = () => $('#objBox').style.display = 'none';
+$('#objGo').onclick = () => {
+  const t = $('#objText').value.trim(); if (!t) return; $('#objBox').style.display = 'none'; $('#objText').value = '';
+  if (st.typing) say.finish();
+  if (st.mode === 'crim') {
+    const before = st.r.G; st.input.text += ' ' + t; const r = E.criminal(st.input, st.r.judgeKey); if (r.blocked) { show('block'); return; }
+    r.script = st.r.script; st.r = r; renderEngine(r); st.log.push({ nm: '피고인 추가 진술', text: t });
+    say('J', r.G < before ? `이의를 인정합니다. 새 진술로 혐의 점수가 ${before.toFixed(1)} → ${r.G.toFixed(1)}로 내려갔습니다.` : `이의를 기각합니다. 오히려 혐의 점수가 ${before.toFixed(1)} → ${r.G.toFixed(1)}입니다.`);
+    return;
+  }
+  const side = document.querySelector('input[name=objSide]:checked').value, before = st.r.ratio.pA;
+  st.input[side].text += ' ' + t; st.log.push({ nm: st.input[side].name + ' 추가 진술', text: t });
+  const r = E.judge(st.input, st.r.judgeKey); if (r.blocked) { show('block'); return; }
+  const mine = side === 'A' ? r.ratio.pA : r.ratio.pB, mineB = side === 'A' ? before : 100 - before;
+  r.script = st.r.script; st.r = r; renderEngine(r);
+  say('J', mine < mineB ? `이의를 인정합니다! 과실 비율을 ${before}:${100 - before}에서 ${r.ratio.pA}:${r.ratio.pB}로 다시 봅니다.` : `이의를 기각합니다. 판단은 ${r.ratio.pA}:${r.ratio.pB}입니다.${mine > mineB ? ' 오히려 책임이 더 드러났네요.' : ''}`);
+};
+
+// ---------- 판결 ----------
+$('#btnVerdict').onclick = () => { show('verdict'); slam(); };
+function slam() {
+  const r = st.r; $('#bigGavel').innerHTML = X.svg('gavel', 10); $('#resultTxt').className = 'result'; $('#resultTxt').textContent = ''; $('#resultSub').textContent = ''; $('#boom').textContent = ''; renderDoc();
+  let n = 0; const hit = () => { const g = $('#bigGavel'); g.classList.remove('hit'); g.offsetHeight; g.classList.add('hit'); sfx.gavel(); $('#boom').textContent = '쾅! '.repeat(n + 1); $('.slam').classList.remove('shake'); $('.slam').offsetHeight; $('.slam').classList.add('shake'); n++;
+    if (n < 3) setTimeout(hit, 420); else setTimeout(reveal, 450); };
+  setTimeout(hit, 200);
+  function reveal() {
+    const el = $('#resultTxt');
+    if (r.mode === 'criminal') { el.textContent = r.guilty ? '유죄!' : '무죄!'; el.classList.add(r.guilty ? 'guilty' : 'free'); $('#resultSub').textContent = `검사 구형 ${r.ask.name} → 판사 선고 ${r.tier.name}`; r.guilty ? sfx.bad() : sfx.fan(); }
+    else { el.textContent = `${r.ratio.pA} : ${r.ratio.pB}`; el.classList.add('civil'); $('#resultSub').textContent = `${st.input.A.name} : ${st.input.B.name} 과실 비율 · ${r.sentence.name}`; sfx.fan(); }
+    requestAnimationFrame(() => el.classList.add('in'));
+  }
+}
+function renderDoc() {
+  const r = st.r, today = new Date().toLocaleDateString('ko-KR');
+  const reasons = (r.reasons || []).map(e => `<div class="reason">${e.tags.map(t => '<span class="t">' + esc(t) + '</span>').join('')} “${esc(e.s)}”</div>`).join('') || '<div class="reason">구체적인 근거 문장이 부족해 기본값으로 판단했습니다.</div>';
+  if (r.mode === 'criminal') {
+    $('#doc').innerHTML = `<div class="stamp">${r.guilty ? '유죄' : '무죄'}</div><h2>판결문</h2><div class="no">사건 ${st.caseNo} · 형사 · ${today}</div>
+      <dl><dt>피고인</dt><dd>${esc(r.name)}</dd><dt>피해자</dt><dd>${esc(r.victim || '나 자신')}</dd><dt>재판부</dt><dd>${esc(r.judge.name)}</dd></dl>
+      <div class="crime">${esc(r.crime)}</div>
+      <h3>주문</h3><div class="tiers">${E.TIERS.map(t => `<span class="${t.level === r.tier.level ? 'on' + (t.level === 0 ? ' free' : '') : t.level === r.ask.level ? 'ask' : ''}">${t.short}</span>`).join('')}</div>
+      <p style="margin:6px 0;font-size:14px">검사 구형: <b>${esc(r.ask.name)}</b> → 판사 선고: <b>${esc(r.tier.name)}</b> — ${esc(r.tier.desc)}${r.gwaessim && r.tier.level ? ' <b style="color:var(--red2)">+ 괘씸죄</b>' : ''}</p>
+      <h3>이유</h3>${r.llm && r.llm.why ? `<p style="font-size:14px">${esc(r.llm.why)}</p>` : ''}${reasons}
+      <p style="font-size:13px">혐의 점수 ${r.G.toFixed(1)}${r.lastEval ? ` · 최후 진술 ${r.lastAdj < 0 ? '정상 참작 −3' : r.lastAdj > 0 ? '괘씸 +3' : '반영 0'}` : ''}${r.victim ? ` · 피해자(${esc(r.victim)}) 있음` : ''}</p>
+      <h3>형 집행</h3>${r.missions.map(m => `<p style="margin:4px 0;font-size:14px">· [${esc(m.kind)}] ${esc(m.text)}</p>`).join('')}
+      <h3>자기 약속</h3><p style="margin:4px 0">“${esc(r.clause)}”</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:14px">본 판결은 재미와 습관 개선을 위한 것으로 법적 효력이 없습니다.</p>`;
+  } else {
+    const A = st.input.A.name, B = st.input.B.name;
+    $('#doc').innerHTML = `<div class="stamp">판결</div><h2>판결문</h2><div class="no">사건 ${st.caseNo} · ${esc(st.input.rel)} · ${st.mode === 'solo' ? '혼자 사연 접수' : '쌍방'} · ${today}</div>
+      <dl><dt>신청인</dt><dd>${esc(A)}</dd><dt>상대방</dt><dd>${esc(B)}${r.check.oneSided ? ' <span style="color:var(--red2)">(진술 없음 · AI 추정)</span>' : ''}</dd><dt>재판부</dt><dd>${esc(r.judge.name)}</dd></dl>
+      <div class="crime">${esc(r.crime)}</div>
+      <h3>주문</h3><p style="margin:4px 0;font-size:14px">과실 비율을 정한다. 형량: <b>${esc(r.sentence.name)}</b> — ${esc(r.sentence.desc)}</p>
+      <div class="rbar"><div class="a" style="flex-basis:${r.ratio.pA}%">${esc(A)} ${r.ratio.pA}%</div><div class="b" style="flex-basis:${r.ratio.pB}%">${r.ratio.pB}% ${esc(B)}</div></div>
+      <h3>이유</h3>${r.llm && r.llm.why ? `<p style="font-size:14px">${esc(r.llm.why)}</p>` : ''}${reasons}
+      <h3>화해 명령</h3>${r.missions.map(m => `<p style="margin:4px 0;font-size:14px">· <b>${esc(m.who)}</b> [${esc(m.kind)}] ${esc(m.text)}</p>`).join('')}
+      <h3>관계 계약 제1조</h3><p style="margin:4px 0">“${esc(r.clause)}”</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:14px">공정성 점검: 순서 교체 ${r.check.swappedPA}% · 길이 보정 전 ${r.check.rawPA}% / 후 ${r.ratio.pA}%${r.check.oneSided ? ' · 한쪽 진술이라 50:50 쪽으로 30% 조정' : ''}<br>본 판결은 재미와 관계 회복을 위한 것으로 법적 효력이 없습니다.</p>`;
+  }
+}
+Object.entries(E.JUDGES).forEach(([k, j]) => { const o = document.createElement('option'); o.value = k; o.textContent = j.name; $('#appealJudge').appendChild(o); });
+$('#appealJudge').value = 'mercy';
+$('#btnAppeal').onclick = () => {
+  const k = $('#appealJudge').value, r1 = st.first || st.r, r2 = evaluate(k); sfx.sel();
+  const crim = st.mode === 'crim', v = r => crim ? r.tier.name : `${r.ratio.pA}:${r.ratio.pB}`;
+  $('#appealBox').style.display = '';
+  $('#appealBox').innerHTML = `<b>항소심 비교</b><table class="rec" style="margin-top:8px"><tr><th>구분</th><th>재판부</th><th>${crim ? '선고' : '과실 비율'}</th></tr>
+    <tr><td>1심</td><td>${esc(r1.judge.name)}</td><td>${esc(v(r1))}</td></tr><tr><td>항소심</td><td>${esc(r2.judge.name)}</td><td><b>${esc(v(r2))}</b></td></tr></table>
+    <p style="font-size:13px">${esc(r2.judge.desc)}. 판사 성향(가중치)만 바꿨을 때 결과가 얼마나 달라지는지 보여 줘요 — 판결은 정답이 아니라 관점!</p>
+    <button class="pbtn sm" id="acceptAppeal">항소심 판결로 확정</button>`;
+  $('#acceptAppeal').onclick = () => { r2.script = st.r.script; st.r = r2; renderEngine(r2); $('#appealBox').style.display = 'none'; slam(); };
+};
+
+// ---------- 판결 카드 PNG ----------
+$('#btnCard').onclick = () => {
+  const r = st.r, c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  const F = (w, s) => `${w} ${s}px Galmuri11, monospace`;
+  g.fillStyle = '#1d1b3a'; g.fillRect(0, 0, 1080, 1350); g.fillStyle = '#fff8e7'; g.fillRect(40, 40, 1000, 1270); g.strokeStyle = '#2b2140'; g.lineWidth = 12; g.strokeRect(40, 40, 1000, 1270);
+  g.fillStyle = '#2b2140'; g.fillRect(40, 40, 1000, 140); g.fillStyle = '#ffd34d'; g.font = F('bold', 60); g.fillText('인생재판소 판결', 80, 135);
+  g.fillStyle = '#2b2140'; g.font = F('', 30); g.fillText('사건 ' + st.caseNo + (r.mode === 'criminal' ? ' · 형사' : ' · ' + st.input.rel), 80, 240);
+  g.fillStyle = '#cf3d47'; g.font = F('bold', 70); wrap(g, r.crime, 80, 350, 920, 84);
+  g.font = F('bold', 120);
+  if (r.mode === 'criminal') { g.fillStyle = r.guilty ? '#ff5a5f' : '#2fa57a'; g.fillText(r.guilty ? '유죄!' : '무죄!', 80, 600); g.fillStyle = '#2b2140'; g.font = F('', 36); g.fillText('구형 ' + r.ask.name + '  →  선고 ' + r.tier.name, 80, 680); }
+  else { const y = 520, wA = 920 * r.ratio.pA / 100; g.fillStyle = '#4aa3ff'; g.fillRect(80, y, wA, 90); g.fillStyle = '#ff5a5f'; g.fillRect(80 + wA, y, 920 - wA, 90); g.strokeRect(80, y, 920, 90);
+    g.fillStyle = '#fff'; g.font = F('bold', 38); g.fillText(st.input.A.name + ' ' + r.ratio.pA + '%', 100, y + 60); g.textAlign = 'right'; g.fillText(r.ratio.pB + '% ' + st.input.B.name, 980, y + 60); g.textAlign = 'left';
+    g.fillStyle = '#2b2140'; g.font = F('', 36); g.fillText('형량: ' + r.sentence.name, 80, 680); }
+  g.font = F('', 30); let yy = 760; r.missions.slice(0, 5).forEach(m => { yy = wrap(g, '▶ ' + (m.who ? m.who + ' ' : '') + '[' + m.kind + '] ' + m.text, 80, yy, 920, 42) + 10; });
+  g.fillStyle = '#7a6f8f'; g.font = F('', 28); wrap(g, '“' + r.clause + '”', 80, Math.max(yy + 30, 1180), 920, 40);
+  const img = new Image(); img.onload = () => { g.drawImage(img, 820, 190, 192, 192); done(); }; img.onerror = done;
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(X.svg('judge', 12));
+  function done() { const a = document.createElement('a'); a.download = '인생재판소_판결카드_' + st.caseNo + '.png'; a.href = c.toDataURL('image/png'); a.click(); sfx.coin(); }
+};
+function wrap(g, t, x, y, w, lh) { let line = ''; for (const ch of t) { if (g.measureText(line + ch).width > w) { g.fillText(line, x, y); line = ch; y += lh; } else line += ch; } g.fillText(line, x, y); return y + lh; }
+
+// ---------- 퀘스트 (형 집행) ----------
+let quests = [];
+$('#btnExec').onclick = () => { buildQuests(); show('quest'); sfx.ok(); };
+function buildQuests() {
+  const r = st.r; $('#closed').classList.remove('on'); $('#apoBox').style.display = 'none'; $('#apoOut').innerHTML = ''; $('#apology').value = '';
+  quests = r.missions.map(m => {
+    const type = m.type || (m.kind === '사과문' ? 'apology' : m.kind === '배상' ? 'gift' : 'check');
+    return Object.assign({ done: false, type, exp: type === 'check' ? 10 : 20 }, m);
+  });
+  renderQuests();
+}
+const QIC = { check: 'star', apology: 'scroll', gift: 'coin', fine: 'coin', game: 'trash', nag: 'judge', roulette: 'heart' };
+function renderQuests() {
+  const done = quests.filter(q => q.done).length; $('#qProg').textContent = `${done} / ${quests.length}`;
+  $('#qList').innerHTML = quests.map((q, i) => {
+    const btn = q.done ? '' : q.type === 'apology' ? `<button class="pbtn sm" data-q="${i}">작성하기</button>` : q.type === 'fine' ? `<button class="pbtn sm" data-q="${i}">코인 ${q.coins}개 납부</button>`
+      : q.type === 'game' ? `<button class="pbtn sm mint" data-q="${i}">미니게임</button>` : q.type === 'nag' ? `<button class="pbtn sm" data-q="${i}">잔소리 듣기</button>`
+      : q.type === 'roulette' ? `<button class="pbtn sm red" data-q="${i}">룰렛 돌리기</button>` : q.type === 'gift' ? `<button class="pbtn sm" data-q="${i}">기프티콘 보내기 (모의)</button>` : `<button class="pbtn sm" data-q="${i}">완료!</button>`;
+    return `<div class="quest ${q.done ? 'done' : ''}"><div class="ic">${QIC[q.type] === 'judge' ? X.svg('judge', 2) : X.svg(QIC[q.type] || 'star', 3.5)}</div><div class="bd"><div class="k">${q.who ? esc(q.who) + ' · ' : ''}${esc(q.kind)}</div><div style="font-size:14px">${esc(q.text)}</div><div class="rw">보상 EXP +${q.exp}</div></div><div>${btn}</div></div>`;
+  }).join('');
+  $$('[data-q]').forEach(b => b.onclick = () => doQuest(+b.dataset.q));
+  if (quests.length && quests.every(q => q.done)) closeCase();
+}
+function clear(i) { if (quests[i].done) return; quests[i].done = true; sfx.ok(); gain(quests[i].exp, 2, quests[i].kind + ' 클리어'); renderQuests(); }
+function doQuest(i) {
+  const q = quests[i];
+  if (q.type === 'apology') { $('#apoBox').style.display = ''; $('#apoTitle').textContent = (st.mode === 'crim' ? '반성문' : '사과문') + ' 제출 (AI 심사)'; $('#apoBox').dataset.i = i; $('#apology').focus(); return; }
+  if (q.type === 'fine') { const pay = Math.min(save.coins, q.coins); save.coins -= pay; persist(); hud(); sfx.coin(); toast(`양심 코인 ${pay}개 납부${pay < q.coins ? ' (부족분은 분할 납부)' : ''}`); clear(i); return; }
+  if (q.type === 'game') { openGame(i); return; }
+  if (q.type === 'nag') { openNag(i); return; }
+  if (q.type === 'roulette') { openRoul(i); return; }
+  if (q.type === 'gift') { toast('기프티콘 결제는 실서비스에서 연동돼요 (지금은 모의)'); }
+  clear(i);
+}
+$('#apoGo').onclick = () => {
+  const v = E.reviewApology($('#apology').value), mk = b => b ? '<b style="color:var(--mint2)">✔</b>' : '<b style="color:var(--red2)">✘</b>';
+  $('#apoOut').innerHTML = `<div class="hpbar" style="margin-bottom:8px"><i style="width:${v.score}%;background:${v.pass ? 'var(--mint)' : 'var(--red)'}"></i></div>
+    ${mk(v.c1)} 잘못 인정 &nbsp; ${mk(v.c2)} 상대가 받은 영향 &nbsp; ${mk(v.c3)} 재발 방지 &nbsp; 변명 ${v.ex}회<br><b>${v.score}점 · ${v.pass ? '통과!' : '재작성 명령'}</b> — ${esc(v.comment)}`;
+  if (v.pass) { const i = +$('#apoBox').dataset.i; if (v.score === 100) save.perfectApology = (save.perfectApology || 0) + 1; clear(i); $('#apoBox').style.display = 'none'; } else sfx.bad();
+};
+function closeCase() {
+  if ($('#closed').classList.contains('on')) return; $('#closed').classList.add('on'); sfx.fan();
+  const r = st.r; const rec = { date: new Date().toLocaleDateString('ko-KR'), mode: st.mode, crime: r.crime, result: r.mode === 'criminal' ? r.tier.name : `${r.ratio.pA}:${r.ratio.pB}`, guilty: r.mode === 'criminal' ? r.guilty : null, closed: true };
+  save.cases.unshift(rec); save.cases = save.cases.slice(0, 50); persist(); gain(30, 10, 'CASE CLOSED');
+}
+$('#qNew').onclick = () => show('select');
+$('#qRecord').onclick = () => openRecord();
+
+// 미니게임: 쓰레기 줍기
+let gTimer = null, gIdx = -1;
+function openGame(i) { gIdx = i; $('#mGame').classList.add('on'); $('#arena').innerHTML = ''; $('#gCnt').textContent = 0; $('#gTime').textContent = 15; $('#gMsg').textContent = '시작을 누르면 쓰레기가 나타나요!'; $('#gStart').disabled = false; }
+$('#gStart').onclick = () => {
+  const ar = $('#arena'); ar.innerHTML = ''; let cnt = 0, t = 15; $('#gStart').disabled = true; $('#gMsg').textContent = '쓰레기를 클릭!';
+  const W = ar.clientWidth - 40, H = ar.clientHeight - 40;
+  const cols = 6, rows = 4, cells = [...Array(cols * rows).keys()].sort(() => Math.random() - 0.5).slice(0, 8);
+  for (let k = 0; k < 8; k++) { const d = document.createElement('div'); d.className = 'tr'; const c = cells[k];
+    d.style.left = ((c % cols) * (W / (cols - 1)) * 0.95 + Math.random() * 6) + 'px'; d.style.top = (Math.floor(c / cols) * (H / (rows - 1)) * 0.95 + Math.random() * 6) + 'px'; d.innerHTML = X.svg('trash', 4.5);
+    d.onclick = () => { d.remove(); cnt++; $('#gCnt').textContent = cnt; sfx.coin(); if (cnt >= 8) end(true); }; ar.appendChild(d); }
+  clearInterval(gTimer); gTimer = setInterval(() => { t--; $('#gTime').textContent = t; if (t <= 0) end(false); }, 1000);
+  function end(win) { clearInterval(gTimer); if (win) { $('#gMsg').textContent = '사회봉사 완료! 법원 앞이 깨끗해졌어요.'; setTimeout(() => { $('#mGame').classList.remove('on'); clear(gIdx); }, 900); }
+    else { sfx.bad(); $('#gMsg').textContent = '시간 초과! 다시 도전하세요.'; $('#gStart').disabled = false; } }
+};
+// 잔소리
+let nagI = 0, nagQ = -1;
+function openNag(i) { nagQ = i; nagI = 0; $('#nagJ').innerHTML = X.svg('judge', 3); $('#mNag').classList.add('on'); $('#nagTxt').textContent = quests[i].nag[0]; sfx.blip('J'); }
+$('#nagNext').onclick = () => { nagI++; const n = quests[nagQ].nag; if (nagI < n.length) { $('#nagTxt').textContent = n[nagI]; sfx.blip('J'); } else { $('#mNag').classList.remove('on'); clear(nagQ); } };
+// 룰렛
+let roulQ = -1;
+function openRoul(i) { roulQ = i; $('#roulTxt').textContent = '???'; $('#roulGo').disabled = false; $('#mRoul').classList.add('on'); }
+$('#roulGo').onclick = () => {
+  $('#roulGo').disabled = true; let k = 0; const R = E.ROULETTE, pick = Math.floor(Math.random() * R.length), total = 18 + pick;
+  const spin = () => { $('#roulTxt').textContent = R[k % R.length]; sfx.blip('P'); k++; if (k <= total) setTimeout(spin, 50 + k * 6); else { sfx.obj(); const q = quests[roulQ]; q.type = 'check'; q.kind = '괘씸죄 벌칙'; q.text = R[(k - 1) % R.length]; setTimeout(() => { $('#mRoul').classList.remove('on'); renderQuests(); }, 1200); } };
+  spin();
+};
+$$('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.remove('on'));
+
+// ---------- 기록부 ----------
+const BADGES = [
+  { id: 'first', nm: '첫 출석', ic: 'star', ok: s => s.cases.length >= 1 },
+  { id: 'citizen', nm: '모범 시민', ic: 'heart', ok: s => s.cases.filter(c => c.mode === 'crim' && (c.result === '무죄' || c.result === '훈방')).length >= 2 },
+  { id: 'habit', nm: '상습범', ic: 'trash', ok: s => { const m = {}; s.cases.filter(c => c.mode === 'crim').forEach(c => m[c.crime] = (m[c.crime] || 0) + 1); return Object.values(m).some(v => v >= 2); } },
+  { id: 'peace', nm: '화해 장인', ic: 'coin', ok: s => s.cases.filter(c => c.mode !== 'crim' && c.closed).length >= 3 },
+  { id: 'confess', nm: '자수의 아이콘', ic: 'scroll', ok: s => s.cases.filter(c => c.mode === 'crim').length >= 3 },
+  { id: 'apology', nm: '반성문 장인', ic: 'star', ok: s => (s.perfectApology || 0) >= 1 }
+];
+function openRecord() {
+  const s = save, crim = s.cases.filter(c => c.mode === 'crim');
+  $('#recStats').innerHTML = `<span>Lv.${lvOf(s.exp)}</span><span>총 재판 ${s.cases.length}건</span><span>유죄 ${crim.filter(c => c.guilty).length}</span><span>무죄 ${crim.filter(c => c.guilty === false).length}</span><span>화해 성립 ${s.cases.filter(c => c.mode !== 'crim').length}</span><span>코인 ${s.coins}</span>`;
+  $('#recBadges').innerHTML = BADGES.map(b => `<span class="badge2 ${b.ok(s) ? '' : 'off'}">${X.svg(b.ic, 3)}${esc(b.nm)}</span>`).join('');
+  $('#recTable').innerHTML = '<tr><th>날짜</th><th>모드</th><th>죄명</th><th>결과</th></tr>' + (s.cases.map(c => `<tr><td>${esc(c.date)}</td><td>${c.mode === 'crim' ? '자수(형사)' : c.mode === 'solo' ? '혼자 사연' : '같이 재판'}</td><td>${esc(c.crime)}</td><td>${esc(c.result)}</td></tr>`).join('') || '<tr><td colspan="4">아직 기록이 없어요. 첫 사건을 접수해 보세요!</td></tr>');
+  show('record');
+}
+$('#btnRecord').onclick = openRecord; $('#recBack').onclick = () => show('select');
+$('#recReset').onclick = () => { save = { exp: 0, coins: 30, cases: [], sound: save.sound }; persist(); hud(); openRecord(); };
+$('#btnSound').onclick = () => { save.sound = !save.sound; persist(); hud(); };
+
+// ---------- 엔진 패널 ----------
+$('#btnEngine').onclick = () => $('#mEngine').classList.add('on');
+function renderEngine(r) {
+  const f = v => (Math.round(v * 10) / 10).toString();
+  if (r.blocked) { $('#engBody').innerHTML = `<h4>STEP 1 · 안전 필터</h4><p>차단: ${r.safety.hits.map(esc).join(', ')} → 재판 대신 기관 안내</p>`; return; }
+  if (r.mode === 'criminal') {
+    const F = r.F, w = r.judge.w;
+    $('#engBody').innerHTML = `<h4>STEP 1 · 안전 필터</h4><p>통과</p><h4>STEP 2 · 쟁점 → 죄명</h4><p>${esc(r.main.name)} → <b>${esc(r.crime)}</b>${r.victim ? ` · 피해자: ${esc(r.victim)}` : ''}</p>
+      <h4>STEP 3 · 특징 점수</h4><table><tr><th>특징</th><th>값</th></tr>${[['쟁점어', 'issue'], ['반복', 'repeat'], ['고의', 'intent'], ['피해자 있음', 'victim'], ['실수·깜빡', 'accident'], ['반성', 'remorse'], ['사정', 'reason'], ['변명', 'excuse']].map(([l, k]) => `<tr><td>${l}</td><td>${f(F[k])}</td></tr>`).join('')}
+      <tr><td><b>행위 act</b></td><td>${f(F.act)}</td></tr><tr><td><b>참작 mit</b></td><td>${f(F.mit)}</td></tr><tr><td><b>태도 att</b></td><td>${f(F.att)}</td></tr></table>
+      <h4>STEP 4 · 혐의 점수 (${esc(r.judge.name)})</h4><p><code>G = 4 + ${w.act}·act − min(${w.mit}·mit, 0.6·${w.act}·act) + ${w.att}·att ${r.lastEval ? (r.lastAdj >= 0 ? '+ ' : '− ') + Math.abs(r.lastAdj) + '(최후 진술)' : ''}</code> = <b>${f(r.G)}</b></p>
+      <h4>STEP 5 · 형량</h4><p>G &lt;6 무죄 · &lt;10 훈방 · &lt;14 벌금 · &lt;18 봉사 · &lt;22 집유 · 그 이상 징역<br>검사 구형 = 최후 진술 전 단계 +1 (최소 벌금형) → <b>${esc(r.ask.name)}</b> / 선고 <b>${esc(r.tier.name)}</b>${r.gwaessim ? ' · 괘씸죄(변명 2회 이상)' : ''}</p>`;
+    return;
+  }
+  const fa = r.ratio.fA, fb = r.ratio.fB, w = r.judge.w, A = st.input ? st.input.A.name : 'A', B = st.input ? st.input.B.name : 'B';
+  $('#engBody').innerHTML = `<h4>STEP 1 · 안전 필터</h4><p>통과</p><h4>STEP 2 · 쟁점</h4><p>${r.issues.map(i => esc(i.name) + '×' + i.n).join(', ') || '특정 쟁점 없음'} → <b>${esc(r.crime)}</b></p>
+    <h4>STEP 3 · 특징 점수 (길이 보정)</h4><table><tr><th>특징</th><th>${esc(A)}</th><th>${esc(B)}</th></tr>${[['지목', 'accuse'], ['반복 지적', 'repeat'], ['인정', 'admit'], ['사전 고지', 'notice'], ['사정', 'reason'], ['변명', 'excuse'], ['공격 표현', 'hostile'], ['인용된 말', 'quotedByOther']].map(([l, k]) => `<tr><td>${l}</td><td>${f(fa[k])}</td><td>${f(fb[k])}</td></tr>`).join('')}
+    <tr><td><b>act</b></td><td>${f(fa.act)}</td><td>${f(fb.act)}</td></tr><tr><td><b>mit</b></td><td>${f(fa.mit)}</td><td>${f(fb.mit)}</td></tr><tr><td><b>att</b></td><td>${f(fa.att)}</td><td>${f(fb.att)}</td></tr></table>
+    <h4>STEP 4 · 과실 (${esc(r.judge.name)})</h4><p><code>8 + ${w.act}·act − min(${w.mit}·mit, 0.6·${w.act}·act) + ${w.att}·att</code><br>${esc(A)} ${f(r.ratio.rawA)} / ${esc(B)} ${f(r.ratio.rawB)} → <b>${r.ratio.pA}:${r.ratio.pB}</b></p>
+    <h4>STEP 5 · 공정성 점검</h4><p>순서 교체 ${r.check.swappedPA}% · 길이 보정 전 ${r.check.rawPA}% · ${r.check.oneSided ? '한쪽 진술 → 50:50 쪽 30% 조정' : '쌍방 진술 확보'}${r.llm ? `<br>LLM 판정 ${r.llm.pA1}% / 순서 교체 ${r.llm.pA2}%` : ''}</p>`;
+}
+
+// ---------- LLM 모드 ----------
+$('#btnMode').onclick = () => $('#mMode').classList.add('on');
+$('#modeDemo').onclick = () => { st.engine = 'demo'; $('#btnMode').textContent = '데모 엔진'; $('#mMode').classList.remove('on'); };
+$('#modeLLM').onclick = () => { st.key = $('#apiKey').value.trim(); st.model = $('#apiModel').value.trim() || st.model; if (!st.key) return; st.engine = 'llm'; $('#btnMode').textContent = 'LLM 모드'; $('#mMode').classList.remove('on'); };
+async function callLLM(system, user) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': st.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: st.model, max_tokens: 1500, system, messages: [{ role: 'user', content: user }] }) });
+  if (!res.ok) throw new Error('API ' + res.status);
+  const j = await res.json(); const t = j.content.map(c => c.text || '').join(''); const m = t.match(/\{[\s\S]*\}/); if (!m) throw new Error('JSON 응답 없음'); return JSON.parse(m[0]);
+}
+const SYS = `당신은 픽셀 게임 '인생재판소'의 AI 법정이다. 일상의 사소한 갈등·잘못을 유머 있게, 그러나 공정하게 다룬다. 목표는 처벌이 아니라 화해와 습관 개선이다.
+규칙: 진술에 없는 사실을 지어내지 않는다. 인용은 원문에서만. 인신공격·고정관념 금지. 폭력·위협·법적 분쟁·자해 신호가 있으면 blocked=true. JSON만 출력.`;
+async function llmTrial(base) {
+  if (st.mode === 'crim') {
+    const p = await callLLM(SYS, `[형사재판] 피고인 ${st.input.name}의 자백: ${st.input.text}\n피해자: ${st.input.victim}\n냥 검사(P)는 기소, 멍 변호사(D)는 변호, 부엉 판사(J)는 진행한다. 출력: {"blocked":false,"crime":"재미있는 죄명(~죄)","script":[{"role":"J|P|D","text"}] 6줄(J 개정, P 공소, D 변론, P 반박, D 정상참작, P 구형),"why":"판결 이유 2문장"}`);
+    if (p.blocked) return Object.assign(base, { blocked: true, safety: { hits: ['LLM 위험 판단'] } });
+    const script = (p.script || []).filter(l => /^[JPD]$/.test(l.role)).slice(0, 6); script.push(base.script[base.script.length - 1]);
+    return Object.assign({}, base, { llm: { why: p.why }, crime: p.crime || base.crime, script: script.length > 2 ? script : base.script });
+  }
+  const fmt = (X1, Y1) => `관계: ${st.input.rel}\n[첫 번째 진술 — ${X1.name}]\n${X1.text}\n[두 번째 진술 — ${Y1.name}]\n${Y1.text || '(진술 없음 — 상대 측 변호인은 입장을 추정하되 추정임을 밝힌다)'}`;
+  const p1 = await callLLM(SYS, fmt(st.input.A, st.input.B) + `\nA측 변호인은 ${st.input.A.name}, B측 변호인은 ${st.input.B.name}을 대리한다. 출력: {"blocked":false,"crime":"~죄","script":[{"role":"J|A|B","text"}] 6줄,"faultA":0~100,"why":"2문장","clause":"재발 방지 약속"}`);
+  if (p1.blocked) return Object.assign(base, { blocked: true, safety: { hits: ['LLM 위험 판단'] } });
+  let pA2 = null; if (st.input.B.text) { const p2 = await callLLM(SYS, fmt(st.input.B, st.input.A) + `\n판사로서 과실만 판정. 출력: {"faultFirst":0~100}`); pA2 = 100 - Math.round(p2.faultFirst); }
+  const pA1 = Math.round(p1.faultA); let pA = pA2 == null ? 50 + (pA1 - 50) * 0.7 : (pA1 + pA2) / 2; pA = Math.min(90, Math.max(10, Math.round(pA / 5) * 5));
+  return Object.assign({}, base, { llm: { pA1, pA2: pA2 == null ? '—' : pA2, why: p1.why }, crime: p1.crime || base.crime, clause: p1.clause || base.clause,
+    script: (p1.script || base.script).filter(l => /^[JAB]$/.test(l.role)), ratio: Object.assign({}, base.ratio, { pA, pB: 100 - pA }), check: Object.assign({}, base.check, { swappedPA: pA2 == null ? base.check.swappedPA : pA2 }) });
+}
+</script>
+</body>
+</html>

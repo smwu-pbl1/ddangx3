@@ -1,0 +1,5 @@
+# 인생재판소 research: 커뮤니티 원문·개인 메모는 절대 커밋하지 않는다
+site/research/raw/
+site/research/*.local.*
+site/research/*_memo*
+.DS_Store
