@@ -5,6 +5,7 @@
  *   node research/run_eval.js --judge=all     # 4명 판사 과실 일치율 비교
  *   node research/run_eval.js --base=main     # git ref의 app.html과 변경 전/후 비교
  *   node research/run_eval.js --presets       # PRESETS 회귀 스냅샷 출력
+ *   node research/run_eval.js --human-only    # 사람이 검수한(labeler='human') 항목만으로 계산
  *
  * app.html의 첫 번째 <script>(엔진 IIFE + PRESETS)만 잘라 vm에서 실행한다. DOM 불필요.
  */
@@ -115,11 +116,12 @@ function presetSnapshot(E, PRESETS) {
 
 // ---------------- main ----------------
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'testset.json'), 'utf8'));
-const items = data.items;
+const items = args['human-only'] ? data.items.filter(i => i.labeler === 'human') : data.items;
 const now = loadEngine(htmlNow());
 const judges = args.judge === 'all' ? Object.keys(now.E.JUDGES) : [args.judge && args.judge !== true ? args.judge : 'balance'];
 
-console.log(`testset ${items.length}건 (사람 라벨 확정 ${items.filter(i => i.labeler === 'human').length}건 / 초안 ${items.filter(i => i.labeler !== 'human').length}건)`);
+console.log(`testset ${data.items.length}건 (사람 검수 ${data.items.filter(i => i.labeler === 'human').length}건 / 초안 ${data.items.filter(i => i.labeler !== 'human').length}건)`
+  + (args['human-only'] ? ` → human 라벨만 ${items.length}건으로 계산` : ' → 전체로 계산'));
 
 if (args.base) {
   const base = loadEngine(htmlAt(args.base));
