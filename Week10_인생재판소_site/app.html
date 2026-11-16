@@ -379,7 +379,12 @@ footer{max-width:1000px;margin:0 auto;padding:0 12px 30px;color:#8f88b8;font-siz
     hostile: ['ㅡㅡ', '!!', '어이없', '미친', '진짜 너무', '짜증나', '열받']
   };
   const SAFETY = ['때렸', '때리', '폭행', '맞았', '협박', '스토킹', '죽고 싶', '죽어버', '자해', '성추행', '성폭',
-    '고소', '소송', '감금', '불법촬영', '몰래 찍'];
+    '고소', '소송', '감금', '불법촬영', '몰래 찍',
+    // 완곡 표현 보강(신체 위해·스토킹·협박·자해 암시·통제)
+    '멍이 들', '멍들', '물건을 던', '밀쳤', '목을 졸', '번호를 바꿔도', '퍼뜨리겠', '올리겠다고', '뿌리겠',
+    '내가 없어지면', '사라지고 싶', '살기 싫', '폰을 검사', '못 만나게'];
+  // 부분일치 오탐 예외: 이 표현 안의 SAFETY 키워드는 무시 ('고소한 냄새', '금액이 맞았는지' 등)
+  const SAFETY_EXCEPT = ['고소한', '고소하', '맞았는지', '맞았어?', '시간 맞'];
   // 혼자 사연 접수 시, 상대 측 변호인이 쓰는 '추정 진술' (쟁점별)
   const ESTIMATE = {
     time: '출발 직전에 일이 생겨서 늦었어. 일부러 기다리게 한 건 아니야.',
@@ -409,7 +414,8 @@ footer{max-width:1000px;margin:0 auto;padding:0 12px 30px;color:#8f88b8;font-siz
   const lenFactor = t => Math.max(1, t.replace(/\s/g, '').length / 120);
 
   function safetyCheck(text) {
-    const hits = SAFETY.filter(k => text.includes(k));
+    const t = SAFETY_EXCEPT.reduce((s, e) => s.split(e).join(' '), text);
+    const hits = SAFETY.filter(k => t.includes(k));
     return { ok: hits.length === 0, hits };
   }
 
