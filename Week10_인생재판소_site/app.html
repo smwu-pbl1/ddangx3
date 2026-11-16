@@ -411,6 +411,7 @@ footer{max-width:1000px;margin:0 auto;padding:0 12px 30px;color:#8f88b8;font-siz
     return { own, quoted: quoted.join(' ') };
   }
   const sentences = t => t.split(/(?<=[.!?。…~])\s+|\n+/).map(s => s.trim()).filter(s => s.length > 1);
+  const SELF_RE = /미안|잘못|내 탓|인정|^(내가|나는|난 |나도)/;
   const lenFactor = t => Math.max(1, t.replace(/\s/g, '').length / 120);
 
   function safetyCheck(text) {
@@ -436,7 +437,8 @@ footer{max-width:1000px;margin:0 auto;padding:0 12px 30px;color:#8f88b8;font-siz
     const fx = normalize ? lenFactor(Xt) : 1, fy = normalize ? lenFactor(Yt) : 1;
     const allKw = ISSUES.flatMap(i => i.kws);
     const r = {
-      accuse: count(Y.own, allKw) / fy,
+      // 지목: 상대가 자기 잘못을 인정하거나 자기 얘기를 하는 문장(미안/잘못/내가/나는…)은 X 지목으로 세지 않는다
+      accuse: count(sentences(Y.own).filter(s => !SELF_RE.test(s)).join(' '), allKw) / fy,
       repeat: count(Y.own, LEX.repeat) / fy,
       admit: count(X.own, LEX.admit) / fx,
       notice: count(X.own, LEX.notice) / fx,
