@@ -30,7 +30,14 @@ function loadEngine(html) {
   return { E: ctx.CourtEngine, PRESETS: ctx.__PRESETS };
 }
 const htmlNow = () => fs.readFileSync(path.join(SITE, 'app.html'), 'utf8');
-const htmlAt = ref => execFileSync('git', ['-C', SITE, 'show', `${ref}:./app.html`], { encoding: 'utf8', maxBuffer: 1 << 26 });
+// 폴더명 변경(Week10_인생재판소_site → site) 이전 ref도 비교할 수 있게 옛 경로로 재시도
+const htmlAt = ref => {
+  // './app.html'은 현재 폴더 기준, 두 번째는 저장소 루트 기준 옛 경로
+  for (const p of ['./app.html', 'Week10_인생재판소_site/app.html']) {
+    try { return execFileSync('git', ['-C', SITE, 'show', `${ref}:${p}`], { encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'ignore'] }); } catch (e) {}
+  }
+  throw new Error(`${ref}에서 app.html을 찾지 못했습니다`);
+};
 
 // 엔진 판결 → 과실 우세 쪽. 쌍방 훈방(|pA-50|<=10)이면 '쌍방'
 const sideOf = pA => Math.abs(pA - 50) <= 10 ? '쌍방' : pA > 50 ? 'A' : 'B';

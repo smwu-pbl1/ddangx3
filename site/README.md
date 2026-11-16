@@ -14,7 +14,7 @@
 
 ## 방법 A. Netlify Drop (가장 빠름)
 1. https://app.netlify.com/drop 접속 → 로그인
-2. 이 폴더(`인생재판소_site`) 전체를 끌어다 놓기
+2. 이 폴더(`site`) 전체를 끌어다 놓기
 3. 생성된 주소 확인 → Site configuration → Change site name 으로 이름 변경
 
 ## 방법 B. GitHub Pages
