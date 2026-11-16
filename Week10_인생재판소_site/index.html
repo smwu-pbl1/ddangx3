@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인생재판소 — 싸움을 끝내는 픽셀 법정</title>
+<meta name="description" content="연인·친구·룸메이트·팀플의 사소한 갈등, 그리고 나의 사소한 잘못까지. AI 판사·검사·변호사가 공방하는 픽셀 게임형 관계 중재 서비스.">
+<meta property="og:title" content="인생재판소 — 싸움을 이기는 앱 말고, 싸움을 끝내는 앱">
+<meta property="og:description" content="같이 재판 · 혼자 사연 접수 · 자수하기 — 3가지 모드의 픽셀 법정 게임">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+/* 인생재판소 픽셀 게임 공통 스타일 */
+@font-face{font-family:'Galmuri11';font-weight:400;font-display:swap;src:url('fonts/Galmuri11.woff2') format('woff2'),url('https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11.woff2') format('woff2')}
+@font-face{font-family:'Galmuri11';font-weight:700;font-display:swap;src:url('fonts/Galmuri11-Bold.woff2') format('woff2'),url('https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11-Bold.woff2') format('woff2')}
+:root{
+  color-scheme:dark;
+  --bg:#1d1b3a;--bg2:#2a2752;--bg3:#363267;--ink:#2b2140;--panel:#fff8e7;--panel2:#f1e2c2;--paper:#fffdf6;
+  --gold:#ffd34d;--gold2:#e8a92e;--red:#ff5a5f;--red2:#cf3d47;--blue:#4aa3ff;--blue2:#2c7fd6;--pink:#ff9db1;--mint:#5fd3a6;--mint2:#2fa57a;
+  --orange:#ffa53a;--purple:#8f7cff;--wood:#b9774a;--wood2:#8a5332;--wood3:#6b3f25;--text:#2b2140;--muted:#7a6f8f;--onbg:#f4efff;
+  --px:4px;
+  --cut:polygon(0 var(--px),var(--px) var(--px),var(--px) 0,calc(100% - var(--px)) 0,calc(100% - var(--px)) var(--px),100% var(--px),100% calc(100% - var(--px)),calc(100% - var(--px)) calc(100% - var(--px)),calc(100% - var(--px)) 100%,var(--px) 100%,var(--px) calc(100% - var(--px)),0 calc(100% - var(--px)));
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--onbg);font-family:'Galmuri11',ui-monospace,'Noto Sans KR',sans-serif;font-size:15px;line-height:1.65;
+  background-image:radial-gradient(#ffffff10 1px,transparent 1.5px),radial-gradient(#ffffff08 1px,transparent 1.5px);background-size:24px 24px,24px 24px;background-position:0 0,12px 12px;
+  -webkit-font-smoothing:none;-moz-osx-font-smoothing:grayscale}
+button,input,textarea,select{font:inherit;color:inherit}
+svg{image-rendering:pixelated}
+.pbox{background:var(--panel);color:var(--text);border:var(--px) solid var(--ink);box-shadow:inset calc(-1*var(--px)) calc(-1*var(--px)) 0 var(--panel2),inset var(--px) var(--px) 0 #ffffff;clip-path:var(--cut);padding:18px}
+.pbox.dark{background:var(--bg2);color:var(--onbg);box-shadow:inset calc(-1*var(--px)) calc(-1*var(--px)) 0 #00000040,inset var(--px) var(--px) 0 #ffffff1a}
+.pbtn{--c:var(--gold);display:inline-flex;align-items:center;gap:8px;justify-content:center;font-weight:700;padding:10px 18px;border:var(--px) solid var(--ink);background:var(--c);color:var(--ink);
+  box-shadow:inset calc(-1*var(--px)) calc(-1*var(--px)) 0 #00000033,inset var(--px) var(--px) 0 #ffffff66;clip-path:var(--cut);cursor:pointer;text-decoration:none;line-height:1.3;user-select:none;transition:transform .05s}
+.pbtn:hover{filter:brightness(1.07)}.pbtn:active{transform:translateY(3px);box-shadow:inset var(--px) var(--px) 0 #00000033}
+.pbtn.red{--c:var(--red);color:#fff}.pbtn.blue{--c:var(--blue);color:#fff}.pbtn.mint{--c:var(--mint)}.pbtn.pink{--c:var(--pink)}.pbtn.purple{--c:var(--purple);color:#fff}
+.pbtn.ghost{--c:var(--panel)}.pbtn.dark{--c:var(--bg3);color:var(--onbg)}
+.pbtn.sm{padding:6px 10px;font-size:13px}
+.pbtn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.pinput,.ptext{width:100%;background:var(--paper);color:var(--text);border:var(--px) solid var(--ink);padding:10px 12px;outline:none;clip-path:var(--cut)}
+.ptext{min-height:120px;resize:vertical;line-height:1.6}
+.pinput:focus,.ptext:focus{background:#fff;box-shadow:inset 0 0 0 3px var(--gold)}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border:3px solid var(--ink);background:var(--gold);color:var(--ink);clip-path:var(--cut)}
+.blink{animation:blink 1s steps(2,start) infinite}@keyframes blink{to{visibility:hidden}}
+.bob{animation:bob 1.2s steps(2) infinite}@keyframes bob{50%{transform:translateY(-4px)}}
+.shake{animation:shake .4s steps(6)}@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(6px,-3px)}60%{transform:translate(-4px,-2px)}80%{transform:translate(4px,2px)}}
+.hpbar{height:16px;border:3px solid var(--ink);background:#3a3460;position:relative;clip-path:var(--cut)}
+.hpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--mint);transition:width .5s steps(10)}
+.stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.stars b{position:absolute;width:4px;height:4px;background:#fff;animation:tw 2s steps(2) infinite}
+@keyframes tw{50%{opacity:.2}}
+
+.in{max-width:1100px;margin:0 auto;padding:0 16px}
+nav{position:sticky;top:0;z-index:20;background:var(--ink);border-bottom:var(--px) solid #000}
+nav .in{display:flex;align-items:center;gap:18px;height:60px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:20px;color:var(--gold);text-decoration:none;text-shadow:3px 3px 0 #000;white-space:nowrap}
+nav .links{display:flex;gap:16px;font-size:13px;flex:1}nav .links a{color:#d9d3f2;text-decoration:none}nav .links a:hover{color:var(--gold)}
+@media(max-width:820px){nav .links{display:none}nav .in{justify-content:space-between}}
+header.hero{position:relative;padding:60px 0 70px;overflow:hidden;border-bottom:var(--px) solid #000}
+.hero .in{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center;position:relative}
+@media(max-width:900px){.hero .in{grid-template-columns:1fr}}
+h1{font-weight:700;font-size:clamp(30px,4.4vw,48px);word-break:keep-all;line-height:1.25;margin:14px 0 16px;text-shadow:5px 5px 0 var(--ink)}
+h1 em{font-style:normal;color:var(--gold)}
+.lead{font-size:16px;word-break:keep-all;color:#d9d3f2;max-width:540px;margin:0 0 24px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.scene{position:relative;height:330px;border:var(--px) solid var(--ink);clip-path:var(--cut);background:repeating-linear-gradient(90deg,#8a5332 0 40px,#7a4729 40px 44px)}
+.scene::after{content:'';position:absolute;left:0;right:0;bottom:0;height:34%;background:conic-gradient(#e9d9b6 25%,#d6c39b 0 50%,#e9d9b6 0 75%,#d6c39b 0) 0 0/36px 36px;border-top:var(--px) solid var(--ink)}
+.scene .s{position:absolute;z-index:2;text-align:center}
+.scene .nm{display:block;font-size:11px;font-weight:700;background:var(--ink);color:#fff;padding:0 6px}
+.scene .bench{position:absolute;left:50%;transform:translateX(-50%);top:104px;width:200px;height:60px;background:var(--wood);border:var(--px) solid var(--ink);box-shadow:inset 0 -8px 0 var(--wood2);z-index:3}
+.scene .bub{position:absolute;right:6%;top:16px;z-index:5;background:var(--red);color:#fff;font-weight:700;font-size:26px;padding:6px 16px;border:var(--px) solid var(--ink);transform:rotate(-6deg);text-shadow:3px 3px 0 var(--ink);animation:wob 1.4s steps(2) infinite}
+@keyframes wob{50%{transform:rotate(-3deg) scale(1.05)}}
+.scene .dlg{position:absolute;left:10px;right:10px;bottom:10px;z-index:6;background:var(--panel);color:var(--text);border:var(--px) solid var(--ink);padding:8px 12px;font-size:13px}
+.scene .dlg b{color:var(--red2)}
+section{padding:70px 0;border-bottom:var(--px) solid #000}
+section.alt{background:var(--bg2)}
+.ey{display:inline-block;font-weight:700;font-size:13px;color:var(--ink);background:var(--gold);padding:2px 10px;border:3px solid var(--ink);margin-bottom:10px}
+h2{font-weight:700;font-size:clamp(26px,4vw,38px);line-height:1.3;margin:0 0 12px;text-shadow:4px 4px 0 var(--ink)}
+.sub{color:#cfc8ea;max-width:700px;margin:0 0 30px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}}@media(max-width:560px){.g3,.g4{grid-template-columns:1fr}}
+.card h3{margin:6px 0 6px;font-size:18px}.card p{margin:0;font-size:14px;color:#4a4060}
+.pics{display:flex;gap:6px;justify-content:center;align-items:flex-end;min-height:72px;margin:8px 0}
+.stat .n{font-weight:700;font-size:44px;line-height:1.1;color:var(--red2)}
+.stat .l{font-weight:700;margin:6px 0}.stat .s{font-size:12px;color:var(--muted)}
+.insight{margin-top:20px;font-size:17px;font-weight:700;color:var(--gold)}
+.stage-n{display:inline-block;font-weight:700;font-size:12px;background:var(--ink);color:var(--gold);padding:2px 8px}
+table{width:100%;border-collapse:collapse;font-size:14px;background:var(--panel);color:var(--text)}
+th,td{border:3px solid var(--ink);padding:10px 12px;text-align:center}th:first-child,td:first-child{text-align:left}
+thead th{background:var(--ink);color:#fff}tr.us td{background:#fff0b8;font-weight:700}.y{color:var(--mint2);font-weight:700}
+.tw{overflow-x:auto}
+.cast{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}@media(max-width:820px){.cast{grid-template-columns:1fr 1fr}}
+.cast .pbox{text-align:center}.cast b{display:block;margin-top:6px;font-size:16px}.cast span{font-size:13px;color:#4a4060}
+.shop .pbox{position:relative}.shop .price{font-weight:700;font-size:28px;color:var(--red2);margin:6px 0}.shop ul{padding-left:18px;margin:6px 0 0;font-size:14px}
+.shop .hot{position:absolute;right:10px;top:10px}
+.note{font-size:12px;color:#a9a2cc;margin-top:12px}
+.final{text-align:center;position:relative;overflow:hidden}
+.press{display:inline-block;font-weight:700;font-size:24px;color:#fff;margin:16px 0}
+footer{padding:26px 0 40px;font-size:12px;color:#a9a2cc}
+</style>
+</head>
+<body>
+<nav><div class="in">
+  <a class="logo" href="#"><span data-spr="gavel:2"></span>인생재판소</a>
+  <div class="links"><a href="#modes">모드</a><a href="#problem">문제</a><a href="#how">진행</a><a href="#diff">차별점</a><a href="#cast">캐릭터</a><a href="#shop">요금</a><a href="#safe">원칙</a><a href="deck.html">서비스 소개서</a></div>
+  <a class="pbtn sm" href="app.html">게임 시작 ▶</a>
+</div></nav>
+
+<header class="hero"><div class="stars" data-stars="40"></div><div class="in">
+  <div>
+    <span class="tag">AI 멀티에이전트 · 픽셀 법정 게임</span>
+    <h1>싸움을 이기는 앱 말고,<br><em>싸움을 끝내는 게임.</em></h1>
+    <p class="lead">연인·친구·룸메이트·팀플의 사소한 갈등, 그리고 나의 사소한 잘못까지. 부엉 판사와 냥 검사, 멍 변호사가 공방을 벌이고, 판결은 화해 퀘스트로 끝납니다.</p>
+    <div class="btns"><a class="pbtn red" href="app.html">▶ PRESS START</a><a class="pbtn ghost" href="deck.html">서비스 소개서</a></div>
+  </div>
+  <div class="scene" aria-label="법정 장면 예시">
+    <div class="bub">이의 있음!</div>
+    <div class="s" style="left:50%;transform:translateX(-50%);top:30px"><span data-spr="judge:5"></span></div>
+    <div class="bench"></div>
+    <div class="s" style="left:5%;top:150px"><span class="nm">냥 검사</span><span data-spr="cat:4"></span></div>
+    <div class="s" style="right:5%;top:150px"><span class="nm">멍 변호사</span><span data-spr="dog:4"></span></div>
+    <div class="s" style="left:50%;transform:translateX(-50%);top:170px;z-index:4"><span data-blob="#ffd34d:4:sad"></span></div>
+    <div class="dlg"><b>냥 검사</b> 피고인은 마감 전날 새벽까지 게임했습니다! 상습성이 인정됩니다! <span class="blink">▼</span></div>
+  </div>
+</div></header>
+
+<section id="modes"><div class="in">
+  <span class="ey">SELECT MODE</span>
+  <h2>세 가지 모드, 하나의 법정</h2>
+  <p class="sub">둘이 같이 와도, 혼자 와도, 내 잘못을 자백하러 와도 괜찮아요.</p>
+  <div class="g3">
+    <div class="pbox card"><span class="tag" style="background:var(--blue);color:#fff">2P · 민사</span><div class="pics"><span data-blob="#7cc4ff:4"></span><span data-spr="judge:4"></span><span data-blob="#ff9db1:4"></span></div><h3>같이 재판</h3><p>반론 요청 링크로 상대도 직접 진술. 과실 비율과 근거를 보고, 화해 미션으로 사건 종결.</p></div>
+    <div class="pbox card"><span class="tag" style="background:var(--pink)">1P · 민사</span><div class="pics"><span data-blob="#7cc4ff:4"></span><span data-spr="judge:4"></span><span data-blob="#d8d2ea:4:sad"></span></div><h3>혼자 사연 접수</h3><p>상대 없이 내 사연만. 상대 측 변호인이 상대 입장을 추정해 변론하고, 판결은 보수적으로 조정돼요.</p></div>
+    <div class="pbox card"><span class="tag" style="background:var(--red);color:#fff">1P · 형사</span><div class="pics"><span data-spr="cat:4"></span><span data-blob="#ffd34d:4:sad"></span><span data-spr="dog:4"></span></div><h3>자수하기</h3><p>나 혼자 피고인! 검사 구형 vs 판사 선고, 최후 진술까지. 무죄부터 징역형(교화 퀘스트)까지 6단계.</p></div>
+  </div>
+</div></section>
+
+<section class="alt" id="problem"><div class="in">
+  <span class="ey">PROBLEM</span>
+  <h2>작은 갈등은 갈 곳이 없습니다</h2>
+  <p class="sub">대부분 참거나 멀어집니다. 커뮤니티에 “판결해 주세요”를 올려도 한쪽 이야기뿐이고, 공식 조정은 너무 무겁고 느립니다.</p>
+  <div class="g3">
+    <div class="pbox stat"><div class="n">63%</div><div class="l">올해 인간관계로 스트레스를 받았다</div><div class="s">원인 1위 ‘소통이 원활하지 않음’ 54% · 한국리서치 2025 인간관계인식조사 (n=1,000)</div></div>
+    <div class="pbox stat"><div class="n">16.8%</div><div class="l">갈등을 ‘직접 대화’로 푼다</div><div class="s">멀어짐 37.0% · 참음 28.4% · 피앰아이 인간관계 스트레스 인식 조사 (2025, n=1,000)</div></div>
+    <div class="pbox stat"><div class="n">10만:13</div><div class="l">층간소음 상담 vs 조정 성립</div><div class="s">상담 10만2124건, 조정 성립 13건 · 2023~2025 한국환경공단·LH 자료 (MTN 2026.9.28)</div></div>
+  </div>
+  <div class="insight">▶ 필요한 건 ‘누가 옳은지’가 아니라, 대화를 끝까지 이어 줄 가볍고 공정한 제3자.</div>
+</div></section>
+
+<section id="how"><div class="in">
+  <span class="ey">HOW TO PLAY</span>
+  <h2>4스테이지로 사건 종결</h2>
+  <p class="sub">재판 연출은 게임처럼, 결말은 ‘무엇을 바꾸기로 했다’로.</p>
+  <div class="g4">
+    <div class="pbox card"><span class="stage-n">STAGE 1</span><h3>사건 접수</h3><p>같이 · 혼자 · 자수 중 모드 선택. 같이 재판은 반론 링크로 상대를 초대.</p></div>
+    <div class="pbox card"><span class="stage-n">STAGE 2</span><h3>법정 공방</h3><p>AI 변호인·검사가 대사를 주고받고, 언제든 “이의 있음!”으로 추가 진술.</p></div>
+    <div class="pbox card"><span class="stage-n">STAGE 3</span><h3>판결 선고</h3><p>과실 비율 또는 유죄/무죄와 형량, 그리고 판단에 쓰인 근거 문장 공개. 항소 가능.</p></div>
+    <div class="pbox card"><span class="stage-n">STAGE 4</span><h3>형 집행 퀘스트</h3><p>사과문·반성문 AI 심사, 미니게임, 양심 코인, 화해 미션. 클리어하면 CASE CLOSED!</p></div>
+  </div>
+</div></section>
+
+<section class="alt" id="diff"><div class="in">
+  <span class="ey">WHY US</span>
+  <h2>“내 편 AI”가 아니라 “둘 다 듣는 AI”</h2>
+  <p class="sub">혼자 쓰는 챗봇은 말한 사람 편을 들기 쉽습니다. 인생재판소는 구조부터 공정하게 만들었어요.</p>
+  <div class="tw"><table>
+    <thead><tr><th>비교</th><th>양측 진술</th><th>판결 근거 공개</th><th>치우침 점검</th><th>화해·습관까지 실행</th></tr></thead>
+    <tbody>
+      <tr><td>커뮤니티 “판결해 주세요” 글</td><td>✕ 한쪽</td><td>댓글 제각각</td><td>✕</td><td>✕</td></tr>
+      <tr><td>범용 AI 챗봇에 하소연</td><td>✕ 한쪽</td><td>△</td><td>✕</td><td>✕</td></tr>
+      <tr><td>기존 AI 연애 재판 앱</td><td>△</td><td>△ 쟁점 정리</td><td>✕</td><td class="y">○ 미션</td></tr>
+      <tr class="us"><td>인생재판소</td><td class="y">○ 반론 링크</td><td class="y">○ 근거 문장</td><td class="y">○ 순서·길이·판사 성향</td><td class="y">○ 퀘스트·배상·약속</td></tr>
+    </tbody></table></div>
+  <p class="note">비교는 공개된 앱 소개 기준 팀 정리이며 출시 전 재확인 예정.</p>
+</div></section>
+
+<section id="cast"><div class="in">
+  <span class="ey">CAST</span>
+  <h2>법정의 친구들</h2>
+  <div class="cast">
+    <div class="pbox"><span data-spr="judge:5"></span><b>부엉 판사</b><span>성향 4종(균형·원칙·온정·태도중시). 근거를 공개하고 판결을 선고</span></div>
+    <div class="pbox"><span data-spr="cat:5"></span><b>냥 검사</b><span>자수하기 모드의 기소 담당. 같이 재판에선 한쪽 변호인</span></div>
+    <div class="pbox"><span data-spr="dog:5"></span><b>멍 변호사</b><span>정상참작 전문. 혼자 모드에선 부재한 상대의 입장을 추정</span></div>
+    <div class="pbox"><span data-blob="#7cc4ff:5"></span><b>당신</b><span>신청인·상대방·피고인. 레벨·양심 코인·칭호를 모아요</span></div>
+  </div>
+</div></section>
+
+<section class="alt" id="shop"><div class="in">
+  <span class="ey">SHOP (가격 가설)</span>
+  <h2>갈등 한 번에 커피 한 잔보다 싸게</h2>
+  <div class="g3 shop">
+    <div class="pbox"><b>무료 재판</b><div class="price">0원</div><ul><li>월 3건 재판</li><li>판결문 · 판결 카드</li><li>형 집행 퀘스트</li></ul></div>
+    <div class="pbox"><span class="tag hot" style="background:var(--red);color:#fff">BEST</span><b>재판소 패스</b><div class="price">월 3,900원</div><ul><li>무제한 재판 · 항소심</li><li>관계 리포트 · 칭호 도감</li><li>자기 약속 리마인드</li></ul></div>
+    <div class="pbox"><b>하우스 · 캠퍼스</b><div class="price">문의</div><ul><li>쉐어하우스·기숙사·팀플 수업용</li><li>공동생활 규칙 법정</li><li>개인 진술은 운영자에게 비공개</li></ul></div>
+  </div>
+  <p class="note">가격은 사용자 인터뷰 전 가설입니다. 배상 판결은 기프티콘 결제로 집행(수수료 모델).</p>
+</div></section>
+
+<section id="safe"><div class="in">
+  <span class="ey">RULES</span>
+  <h2>재미있게, 그러나 선은 지킵니다</h2>
+  <div class="g4">
+    <div class="pbox card"><h3>사소한 일만</h3><p>폭력·위협·법적 분쟁·자해 신호가 보이면 재판을 열지 않고 112·1366·132·109를 안내해요.</p></div>
+    <div class="pbox card"><h3>판결은 관점</h3><p>법적 효력이 없고, 판사 성향과 근거를 모두 공개해요. 항소로 다른 관점도 볼 수 있어요.</p></div>
+    <div class="pbox card"><h3>한쪽 진술은 보수적으로</h3><p>상대 진술이 없으면 50:50 쪽으로 조정하고, AI 추정임을 판결문에 표시해요.</p></div>
+    <div class="pbox card"><h3>진술은 당사자만</h3><p>사건 진술은 두 당사자만 보고, 공개 공유는 양측 동의와 익명화 후에만.</p></div>
+  </div>
+</div></section>
+
+<section class="final"><div class="stars" data-stars="30"></div><div class="in">
+  <h2>오늘의 사건, 오늘 종결</h2>
+  <p style="color:#cfc8ea">로그인 없이 바로 플레이할 수 있는 프로토타입입니다.</p>
+  <a class="press blink" href="app.html">▶ PRESS START</a>
+</div></section>
+
+<footer><div class="in">
+  <p>인생재판소 · 숙명여자대학교 PBLⅠ(AI Problem Solving) 팀 프로젝트 · 10주차 초안 v0.2 · 팀 인생재판소</p>
+  <p>엔터테인먼트·관계 중재 서비스이며 법률·심리 상담을 대신하지 않습니다. 픽셀 폰트: 갈무리(Galmuri, SIL OFL).</p>
+  <p>출처: 한국리서치 「2025 인간관계인식조사」(2025.12.24) · 피앰아이 「인간관계 스트레스 인식 조사」(위키트리 2025.5.22) · 조인철 의원실 한국환경공단·LH 제출자료(MTN 2026.9.28)</p>
+</div></footer>
+<script>
+/* 인생재판소 도트 스프라이트 (오리지널 캐릭터) — 16×16 픽셀 격자 → SVG */
+(function (root) {
+  const PAL = {
+    k: '#2b2140', w: '#ffffff', o: '#ffa53a', y: '#ffd34d', p: '#ff9db1', n: '#2b2140',
+    // 부엉 판사
+    b: '#9a6b4b', B: '#6f4a33', l: '#f6dcae', r: '#433b66', R: '#2f2a4d', c: '#ffffff',
+    // 냥 검사
+    f: '#ffb35c', F: '#e5893a', s: '#ff5a5f', S: '#cf3d47',
+    // 멍 변호사
+    d: '#a8744d', D: '#7d5236', e: '#fbe8c8', u: '#4aa3ff', U: '#2c7fd6',
+    g: '#9aa0b5', G: '#6b7088'
+  };
+  const SP = {
+    judge: [
+      '................',
+      '...kk......kk...',
+      '..kbBk....kBbk..',
+      '..kbbbkkkkbbbk..',
+      '.kbbbbbbbbbbbbk.',
+      '.kbyyybbbbyyybk.',
+      'kbywwwyllywwwybk',
+      'kbywkwyllywkwybk',
+      'kbbyyylooolyyybk',
+      '.kbbbllOOOllbbk.',
+      '.kRrrrcclccrrrRk',
+      'kRrrrrrcccrrrrrk',
+      'kRrrrryrrryrrrRk',
+      'kRRrrrrrrrrrrRRk',
+      '.kRRRRRRRRRRRRk.',
+      '..kkkkkkkkkkkk..'
+    ],
+    cat: [
+      '................',
+      '..kk........kk..',
+      '.kfFk......kFfk.',
+      '.kfpfkkkkkkfpfk.',
+      '.kffffFffFffffk.',
+      'kffffffffffffffk',
+      'kffkkkffffkkkffk',
+      'kfffwkffffkwfffk',
+      'kfppfffkkfffppfk',
+      '.kffffkfOkffffk.',
+      '..kkffffffffkk..',
+      '.kSsswwyywwsssSk',
+      'kSssssswyysssssk',
+      'kSsssssyysssssSk',
+      '.kSSssssssssSSk.',
+      '..kkkkkkkkkkkk..'
+    ],
+    dog: [
+      '................',
+      '....kkkkkkkk....',
+      '..kkeeeeeeeekk..',
+      '.kDdeeeeeeeedDk.',
+      'kDddeeeeeeeeddDk',
+      'kDddewkeekweddDk',
+      'kDddekkeekkeddDk',
+      'kDdeeeeeeeeeedDk',
+      '.kDeppeenneeppDk',
+      '.kkeeeeeOOeeeekk',
+      '..kkeeeeeeeekk..',
+      '.kUuuuwwyywuuuUk',
+      'kUuuuuuwyyuuuuuk',
+      'kUuuuuuyyuuuuuUk',
+      '.kUUuuuuuuuuUUk.',
+      '..kkkkkkkkkkkk..'
+    ],
+    gavel: [
+      '............',
+      '.kkkkkkkkkk.',
+      'kbBBbbbbBBbk',
+      'kbBBbbbbBBbk',
+      'kbBBbbbbBBbk',
+      '.kkkkkkkkkk.',
+      '.....kk.....',
+      '....kbbk....',
+      '....kbbk....',
+      '....kbbk....',
+      '....kbbk....',
+      '.....kk.....'
+    ],
+    coin: ['..kkkk..', '.kyyyyk.', 'kyywyyyk', 'kywyyyyk', 'kyyyyoyk', 'kyyyyoyk', '.kyoooк.'.replace('к', 'k'), '..kkkk..'],
+    heart: ['........', '.kk..kk.', 'kssksssk', 'kswssssk', 'kssssssk', '.kssssk.', '..kssk..', '...kk...'],
+    star: ['...kk...', '...ky...', 'kkkyykkk', 'kyyyyyyk', '.kyyyyk.', '.kyykyk.', 'kyk..kyk', 'kk....kk'],
+    trash: ['..kkkk..', '.kggggk.', 'kkkkkkkk', '.kgGgGk.', '.kgGgGk.', '.kgGgGk.', '.kgGgGk.', '..kkkk..'],
+    scroll: ['.kkkkkk.', 'klllllk.', '.kllllk.', '.klkklk.', '.kllllk.', '.klkklk.', '.kllllk.', 'kkkkkkk.']
+  };
+  // 말하는 프레임: 입(O)을 벌림
+  function grid(name, talk) { return SP[name].map(row => row.replace(/O/g, talk ? 'k' : (name === 'judge' ? 'o' : (name === 'cat' ? 'f' : 'e')))); }
+  function svg(name, scale, opt) {
+    opt = opt || {}; const g = grid(name, opt.talk); const h = g.length, w = g[0].length; const pal = Object.assign({}, PAL, opt.pal || {});
+    let rects = '';
+    g.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const ch = row[x]; if (ch === '.' || !pal[ch]) continue; rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${pal[ch]}"/>`; } });
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w * scale}" height="${h * scale}" shape-rendering="crispEdges" style="image-rendering:pixelated">${rects}</svg>`;
+  }
+  // 동그란 떡 캐릭터 (사용자 아바타) — 원·눈·볼터치를 계산으로 그림
+  function blob(color, scale, opt) {
+    opt = opt || {}; const W = 16, H = 16; const dark = opt.dark || '#2b2140';
+    let rects = ''; const px = (x, y, c) => { rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; };
+    const inside = (x, y) => { const dx = (x + 0.5 - 8) / 7, dy = (y + 0.5 - 10) / 5.6; return dx * dx + dy * dy <= 1; };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (inside(x, y)) { const edge = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1); px(x, y, edge ? dark : color); }
+    }
+    px(5, 7, '#ffffff99'); px(6, 6, '#ffffff99');
+    if (opt.sad) { px(5, 10, dark); px(10, 10, dark); px(4, 9, dark); px(11, 9, dark); } else { px(5, 9, dark); px(5, 10, dark); px(10, 9, dark); px(10, 10, dark); }
+    px(3, 11, '#ff9db1'); px(12, 11, '#ff9db1');
+    if (opt.talk) { px(7, 12, dark); px(8, 12, dark); px(7, 13, '#ff5a5f'); px(8, 13, '#ff5a5f'); } else { px(7, 12, dark); px(8, 12, dark); }
+    if (opt.crown) { px(6, 3, '#ffd34d'); px(8, 2, '#ffd34d'); px(10, 3, '#ffd34d'); for (let x = 6; x <= 10; x++) px(x, 4, '#ffd34d'); }
+    if (opt.jail) { for (let x = 1; x < 16; x += 3) for (let y = 1; y < 16; y++) px(x, y, '#6b7088'); for (let x = 0; x < 16; x++) { px(x, 1, '#6b7088'); px(x, 15, '#6b7088'); } }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${16 * scale}" height="${16 * scale}" shape-rendering="crispEdges" style="image-rendering:pixelated">${rects}</svg>`;
+  }
+  const api = { svg, blob, PAL, SP };
+  root.Pix = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+document.querySelectorAll('[data-spr]').forEach(el => { const [n, s] = el.dataset.spr.split(':'); el.innerHTML = Pix.svg(n, +s); });
+document.querySelectorAll('[data-blob]').forEach(el => { const [c, s, o] = el.dataset.blob.split(':'); el.innerHTML = Pix.blob(c, +s, { sad: o === 'sad' }); });
+document.querySelectorAll('[data-stars]').forEach(el => { let h = ''; for (let i = 0; i < +el.dataset.stars; i++) h += `<b style="left:${Math.random() * 100}%;top:${Math.random() * 100}%;animation-delay:${(Math.random() * 2).toFixed(2)}s"></b>`; el.innerHTML = h; });
+</script>
+</body>
+</html>
